@@ -1,0 +1,92 @@
+{
+ "axes_check": {
+  "BatchNorm2d == normalise over (N,H,W) per channel": 2.384185791015625e-07,
+  "LayerNorm2d (ConvNeXt) == normalise over C per (n,h,w)": 4.76837158203125e-07,
+  "GroupNorm(1) == normalise over (C,H,W) per sample": 4.76837158203125e-07,
+  "number of statistics (mean,var pairs) BN / LN / GN1": [
+   16,
+   288,
+   8
+  ]
+ },
+ "models": {
+  "bn": "checkpoints/main_bn.pt",
+  "ln": "checkpoints/main_ln.pt"
+ },
+ "batch_dependence_rel_std": {
+  "bn": {
+   "2": 0.9317655563354492,
+   "4": 0.8118056654930115,
+   "8": 0.5948845744132996,
+   "16": 0.4457876980304718,
+   "32": 0.2810341417789459,
+   "64": 0.19786706566810608,
+   "128": 0.13086764514446259,
+   "256": 0.09476345032453537
+  },
+  "bn_pred_changes": {
+   "2": 4,
+   "4": 2,
+   "8": 3,
+   "16": 2,
+   "32": 1,
+   "64": 0,
+   "128": 0,
+   "256": 0
+  },
+  "ln": {
+   "2": 0.0,
+   "4": 0.0,
+   "8": 0.0,
+   "16": 0.0,
+   "32": 0.0,
+   "64": 0.0,
+   "128": 0.0,
+   "256": 0.0
+  },
+  "ln_pred_changes": {
+   "2": 0,
+   "4": 0,
+   "8": 0,
+   "16": 0,
+   "32": 0,
+   "64": 0,
+   "128": 0,
+   "256": 0
+  }
+ },
+ "train_mode_batch_size_1": {
+  "bn": "ValueError: Expected more than 1 value per channel when training, got input size torch.Size([1, 256])",
+  "ln": "ok"
+ },
+ "test_acc_running_vs_batch_stats": {
+  "bn_running_stats": 87.49,
+  "ln": 81.05,
+  "bn_batch_stats": {
+   "2": 66.01,
+   "4": 75.61,
+   "16": 84.35,
+   "128": 86.87,
+   "1000": 87.34
+  },
+  "ln_train_mode": {
+   "2": 81.05,
+   "1000": 81.05
+  }
+ },
+ "bn_folding": {
+  "max_abs_diff_after_folding": 1.5497207641601562e-06,
+  "max_abs_logit": 4.60752010345459,
+  "test_acc_folded": 87.49,
+  "bn2d_layers_before": 34,
+  "bn2d_layers_after": 4,
+  "latency_ms_batch32": {
+   "bn_nchw": 27.221422266666195,
+   "bn_folded_nchw": 24.41028619999391,
+   "ln_nchw": 18.03874226664751,
+   "bn_channels_last": 16.704775033334347,
+   "bn_folded_channels_last": 13.779544966685839,
+   "ln_channels_last": 17.40210373333563
+  }
+ }
+}

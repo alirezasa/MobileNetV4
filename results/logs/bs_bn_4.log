@@ -1,0 +1,6 @@
+model=tiny block=convnext norm=bn params=1.907M
+{"epoch": 1, "lr": 0.0003449257950294787, "train_loss": 2.1261889912605287, "train_acc": 22.56, "test_loss": 1.8271235406398774, "test_acc": 32.68000020980835, "epoch_time": 101.47111225128174, "test_loss_trainmode": 1.9649874855518341, "test_acc_trainmode": 27.64}
+{"epoch": 2, "lr": 0.00031988753750387055, "train_loss": 2.0042642251968386, "train_acc": 29.5, "test_loss": 1.7217977046966553, "test_acc": 39.67000026702881, "epoch_time": 99.78499960899353, "test_loss_trainmode": 1.8666299802064896, "test_acc_trainmode": 33.31}
+{"epoch": 3, "lr": 0.00028088953711485405, "train_loss": 1.9405631957530975, "train_acc": 32.92, "test_loss": 1.5948147654533387, "test_acc": 44.570000076293944, "epoch_time": 97.17070508003235, "test_loss_trainmode": 1.7715198472738265, "test_acc_trainmode": 37.51}
+{"epoch": 4, "lr": 0.00023174918985555205, "train_loss": 1.8658308063030242, "train_acc": 37.49, "test_loss": 1.501850575208664, "test_acc": 47.48999996185303, "epoch_time": 101.3900363445282, "test_loss_trainmode": 1.6936661354780198, "test_acc_trainmode": 40.9}
+{"epoch": 5, "lr": 0.0001772766952966369, "train_loss": 1.8117283383131026, "train_acc": 40.0, "test_loss": 1.4524801552295685, "test_acc": 50.55999984741211, "epoch_time": 104.67117738723755, "test_loss_trainmode": 1.6258961076736451, "test_acc_trainmode": 44.19}
