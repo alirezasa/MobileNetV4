@@ -1,0 +1,35 @@
+{
+ "args": {
+  "data": "/tmp/data",
+  "model": "tiny",
+  "block": "convnext",
+  "norm": "bn",
+  "epochs": 30,
+  "batch_size": 128,
+  "lr": 0.002,
+  "weight_decay": 0.05,
+  "warmup_epochs": 2,
+  "smoothing": 0.1,
+  "drop_path": 0.1,
+  "grad_clip": null,
+  "train_subset": 0,
+  "eval_train_mode": false,
+  "threads": 2,
+  "no_channels_last": false,
+  "seed": 0,
+  "out": "results/main_bn.json",
+  "save_ckpt": "checkpoints/main_bn.pt"
+ },
+ "params": 1906666,
+ "epochs": [
+  {
+   "epoch": 1,
+   "lr": 0.0010004999999999999,
+   "train_loss": 1.8636848999903752,
+   "train_acc": 36.90905448717949,
+   "test_loss": 1.4450817167758943,
+   "test_acc": 49.140000343322754,
+   "epoch_time": 107.00573325157166
+  }
+ ]
+}

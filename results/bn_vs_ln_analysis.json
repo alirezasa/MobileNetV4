@@ -1,0 +1,89 @@
+{
+ "axes_check": {
+  "BatchNorm2d == normalise over (N,H,W) per channel": 2.384185791015625e-07,
+  "LayerNorm2d (ConvNeXt) == normalise over C per (n,h,w)": 4.76837158203125e-07,
+  "GroupNorm(1) == normalise over (C,H,W) per sample": 4.76837158203125e-07,
+  "number of statistics (mean,var pairs) BN / LN / GN1": [
+   16,
+   288,
+   8
+  ]
+ },
+ "models": {
+  "bn": "random init (layer scale = 1)",
+  "ln": "random init (layer scale = 1)"
+ },
+ "batch_dependence_rel_std": {
+  "bn": {
+   "2": 1.0777289867401123,
+   "4": 0.9670910239219666,
+   "8": 0.7701301574707031,
+   "16": 0.6534377932548523,
+   "32": 0.462519109249115,
+   "64": 0.31091436743736267,
+   "128": 0.25770890712738037,
+   "256": 0.15189068019390106
+  },
+  "bn_pred_changes": {
+   "2": 7,
+   "4": 6,
+   "8": 6,
+   "16": 6,
+   "32": 3,
+   "64": 3,
+   "128": 1,
+   "256": 0
+  },
+  "ln": {
+   "2": 0.0,
+   "4": 0.0,
+   "8": 0.0,
+   "16": 0.0,
+   "32": 0.0,
+   "64": 0.0,
+   "128": 0.0,
+   "256": 0.0
+  },
+  "ln_pred_changes": {
+   "2": 0,
+   "4": 0,
+   "8": 0,
+   "16": 0,
+   "32": 0,
+   "64": 0,
+   "128": 0,
+   "256": 0
+  }
+ },
+ "train_mode_batch_size_1": {
+  "bn": "ValueError: Expected more than 1 value per channel when training, got input size torch.Size([1, 256])",
+  "ln": "ok"
+ },
+ "test_acc_running_vs_batch_stats": {
+  "bn_running_stats": 11.2,
+  "ln": 9.98,
+  "bn_batch_stats": {
+   "2": 10.19,
+   "4": 10.93,
+   "16": 11.13,
+   "128": 10.69,
+   "1000": 11.18
+  },
+  "ln_train_mode": {
+   "2": 9.98,
+   "1000": 9.98
+  }
+ },
+ "bn_folding": {
+  "max_abs_diff_after_folding": 6.984919309616089e-10,
+  "max_abs_logit": 0.0015343594131991267,
+  "test_acc_folded": 11.2,
+  "bn2d_layers_before": 34,
+  "bn2d_layers_after": 4,
+  "latency_ms_batch32": {
+   "bn": 46.30426096666724,
+   "bn_folded": 42.360289200003834,
+   "ln": 30.181989966672518
+  }
+ }
+}

@@ -1,0 +1,2 @@
+model=tiny block=convnext norm=bn params=1.907M
+{"epoch": 1, "lr": 0.0010004999999999999, "train_loss": 1.8636848999903752, "train_acc": 36.90905448717949, "test_loss": 1.4450817167758943, "test_acc": 49.140000343322754, "epoch_time": 107.00573325157166}
