@@ -1,0 +1,48 @@
+{
+ "args": {
+  "data": "/tmp/data",
+  "model": "tiny",
+  "block": "convnext",
+  "norm": "bn",
+  "epochs": 10,
+  "batch_size": 4,
+  "lr": 0.0003535533905932738,
+  "weight_decay": 0.05,
+  "warmup_epochs": 1.0,
+  "smoothing": 0.1,
+  "drop_path": 0.1,
+  "grad_clip": null,
+  "train_subset": 10000,
+  "eval_train_mode": true,
+  "threads": 2,
+  "no_channels_last": false,
+  "seed": 0,
+  "out": "results/bs_bn_4.json",
+  "save_ckpt": ""
+ },
+ "params": 1906666,
+ "epochs": [
+  {
+   "epoch": 1,
+   "lr": 0.0003449257950294787,
+   "train_loss": 2.1261889912605287,
+   "train_acc": 22.56,
+   "test_loss": 1.8271235406398774,
+   "test_acc": 32.68000020980835,
+   "epoch_time": 101.47111225128174,
+   "test_loss_trainmode": 1.9649874855518341,
+   "test_acc_trainmode": 27.64
+  },
+  {
+   "epoch": 2,
+   "lr": 0.00031988753750387055,
+   "train_loss": 2.0042642251968386,
+   "train_acc": 29.5,
+   "test_loss": 1.7217977046966553,
+   "test_acc": 39.67000026702881,
+   "epoch_time": 99.78499960899353,
+   "test_loss_trainmode": 1.8666299802064896,
+   "test_acc_trainmode": 33.31
+  }
+ ]
+}

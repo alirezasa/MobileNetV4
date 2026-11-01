@@ -22,7 +22,7 @@ def col(h, k):
 lines = []
 
 # ------------------------------------------------------------------ experiment 1: main curves
-main = {n: load(f'{R}/main_{n}.json') for n in ['bn', 'ln'] if os.path.exists(f'{R}/main_{n}.json')}
+main = {n: load(f'{R}/main_{n}.json') for n in ['bn', 'ln', 'gn1'] if os.path.exists(f'{R}/main_{n}.json')}
 if main:
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.8))
     for n, h in main.items():
@@ -32,13 +32,13 @@ if main:
             ax.plot(ep, col(h, f'test_{key}'), color=COLORS[n], lw=2, label=f'{LABELS[n]} test')
         # direct label on the final test accuracy
         axes[1].annotate(f"{h['epochs'][-1]['test_acc']:.2f}%", (ep[-1], h['epochs'][-1]['test_acc']),
-                         xytext=(4, -3 if n == 'bn' else 6), textcoords='offset points', fontsize=8, color=INK2)
+                         xytext=(4, {'bn': -3, 'ln': 6, 'gn1': -9}[n]), textcoords='offset points', fontsize=8, color=INK2)
     axes[0].set_title('Loss'); axes[0].set_ylabel('cross-entropy')
     axes[1].set_title('Accuracy'); axes[1].set_ylabel('top-1 accuracy (%)')
     for ax in axes:
         ax.set_xlabel('epoch')
     axes[1].legend(fontsize=8, loc='lower right')
-    fig.text(0.5, -0.03, 'Train loss includes label smoothing (0.1), drop-path and augmentation; test loss is plain cross-entropy.',
+    fig.text(0.5, -0.07, 'Train loss includes label smoothing (0.1), drop-path and augmentation; test loss is plain cross-entropy.',
              ha='center', fontsize=8, color=INK2)
     fig.savefig(f'{F}/main_curves.png')
     plt.close(fig)

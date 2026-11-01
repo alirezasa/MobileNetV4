@@ -1,0 +1,3 @@
+model=tiny block=convnext norm=bn params=1.907M
+{"epoch": 1, "lr": 0.0003449257950294787, "train_loss": 2.1261889912605287, "train_acc": 22.56, "test_loss": 1.8271235406398774, "test_acc": 32.68000020980835, "epoch_time": 101.47111225128174, "test_loss_trainmode": 1.9649874855518341, "test_acc_trainmode": 27.64}
+{"epoch": 2, "lr": 0.00031988753750387055, "train_loss": 2.0042642251968386, "train_acc": 29.5, "test_loss": 1.7217977046966553, "test_acc": 39.67000026702881, "epoch_time": 99.78499960899353, "test_loss_trainmode": 1.8666299802064896, "test_acc_trainmode": 33.31}

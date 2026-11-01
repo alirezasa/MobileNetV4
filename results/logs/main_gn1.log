@@ -1,0 +1,1 @@
+model=tiny block=convnext norm=gn1 params=1.907M
