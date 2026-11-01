@@ -9,6 +9,8 @@ T=${THREADS:-2}
 lane_a() {
   # Experiment 1 (main): BatchNorm, full CIFAR-10, 30 epochs
   python train.py --data $DATA --threads $T --norm bn --epochs 30 --save-ckpt checkpoints/main_bn.pt --out results/main_bn.json > results/logs/main_bn.log 2>&1
+  # Extra: GroupNorm with a single group (LN over C,H,W of each sample), full CIFAR-10, 30 epochs
+  python train.py --data $DATA --threads $T --norm gn1 --epochs 30 --save-ckpt checkpoints/main_gn1.pt --out results/main_gn1.json > results/logs/main_gn1.log 2>&1
 }
 
 lane_b() {
@@ -31,3 +33,4 @@ lane_b() {
 
 lane_a & lane_b & wait
 echo ALL DONE
+# afterwards: python bn_vs_ln_analysis.py --data $DATA && python plot_results.py && python report/make_report.py && node report/make_docx.js
