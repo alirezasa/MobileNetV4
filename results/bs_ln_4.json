@@ -1,0 +1,37 @@
+{
+ "args": {
+  "data": "/tmp/data",
+  "model": "tiny",
+  "block": "convnext",
+  "norm": "ln",
+  "epochs": 10,
+  "batch_size": 4,
+  "lr": 0.0003535533905932738,
+  "weight_decay": 0.05,
+  "warmup_epochs": 1.0,
+  "smoothing": 0.1,
+  "drop_path": 0.1,
+  "grad_clip": null,
+  "train_subset": 10000,
+  "eval_train_mode": true,
+  "threads": 2,
+  "no_channels_last": false,
+  "seed": 0,
+  "out": "results/bs_ln_4.json",
+  "save_ckpt": ""
+ },
+ "params": 1906666,
+ "epochs": [
+  {
+   "epoch": 1,
+   "lr": 0.0003449257950294787,
+   "train_loss": 2.0651169613838194,
+   "train_acc": 26.35,
+   "test_loss": 1.8176378726959228,
+   "test_acc": 34.619999694824216,
+   "epoch_time": 109.57388544082642,
+   "test_loss_trainmode": 1.8176378582954407,
+   "test_acc_trainmode": 34.62
+  }
+ ]
+}

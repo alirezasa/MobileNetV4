@@ -1,209 +1,254 @@
 <div dir="rtl">
 
-# پیاده‌سازی و آموزش معماری مبتنی بر بلوک‌های UIB در MobileNetV4 (به سبک ConvNeXt) روی CIFAR-10 و بررسی BatchNorm در برابر LayerNorm
+# پیاده‌سازی و آموزش شبکه‌ی ConvNeXt مبتنی بر بلوک‌های UIB معماری MobileNetV4 روی CIFAR-10
 
-## فهرست
+### و بررسی تفاوت BatchNormalization و LayerNormalization
 
-1. [خلاصه‌ی نتایج](#summary)
-2. [ساختار مخزن و نحوه‌ی اجرا](#repo)
-3. [بلوک UIB در MobileNetV4](#uib)
-4. [معماری پیاده‌سازی‌شده: ConvNeXt-UIB](#arch)
-5. [داده و پیش‌پردازش](#data)
-6. [حلقه‌ی آموزش](#train)
-7. [آزمایش ۱: آموزش اصلی و روند Loss و Accuracy](#exp1)
-8. [تحقیق: تفاوت BatchNorm و LayerNorm](#theory)
-9. [آزمایش ۲: حساسیت به اندازه‌ی batch](#exp2)
-10. [آزمایش ۳: تحلیل بدون آموزش (وابستگی به batch، حالت train/eval، ادغام BN در کانولوشن)](#exp3)
-11. [جمع‌بندی](#conclusion)
-12. [منابع](#refs)
+*کد کامل، نتایج و نمودارها: github.com/alirezasa/MobileNetV4 (شاخه‌ی claude/nice-knuth-ot17ij)*
 
-<a id="summary"></a>
-## ۱. خلاصه‌ی نتایج
+## ۱. خلاصه
 
-%%SUMMARY%%
+یک شبکه با ساختار کلی ConvNeXt ساخته شد که در آن هر بلوک، بلوک **Universal Inverted Bottleneck (UIB)** معماری MobileNetV4 است. پیاده‌سازی UIB از کتابخانه‌ی **timm** گرفته شد. مدل (۱٫۹۱ میلیون پارامتر) با بهینه‌ساز **AdamW** به مدت ۳۰ epoch روی CIFAR-10 آموزش داده شد. سپس همین شبکه یک بار با BatchNorm و یک بار با LayerNorm آموزش داده شد و چند آزمایش برای بررسی تفاوت این دو انجام شد.
 
-<a id="repo"></a>
-## ۲. ساختار مخزن و نحوه‌ی اجرا
+- دقت نهایی روی داده‌ی آزمون (۱۰٬۰۰۰ تصویر): **BatchNorm: ۸۷٫۴۹٪** و **LayerNorm: ۸۱٫۰۵٪**؛ یعنی BN در این بودجه‌ی آموزشی کوتاه حدود ۶٫۴ واحد درصد بهتر است.
+- LayerNorm از ابتدا تا انتها کندتر همگرا شد و دقت آموزش آن نیز پایین‌تر ماند (۸۶٫۰۹٪ در برابر ۹۳٫۸۱٪). پس فاصله از نوع underfitting است و نه overfitting.
+- BN خروجی یک تصویر را به تصاویر دیگر batch وابسته می‌کند. اگر BN در زمان آزمون با آمار batch کار کند، با batch آزمون ۲ دقت از ۸۷٫۴۹٪ به ۶۶٫۰۱٪ می‌رسد. LN در همه‌ی حالت‌ها دقیقاً یکسان است.
+- BN در زمان inference به یک تبدیل خطی ثابت تبدیل می‌شود و در وزن کانولوشن قبلی ادغام می‌شود (۳۰ لایه از ۳۴ لایه‌ی BN حذف شد و دقت بدون تغییر ماند). LN این امکان را ندارد.
+
+## ۲. ساختار کد و نحوه‌ی اجرا
+
+| فایل | توضیح |
+|---|---|
+| src/models.py | مدل ConvNeXt-UIB (بلوک UIB از timm) با لایه‌ی نرمال‌سازی قابل انتخاب |
+| src/data.py | بارگذاری CIFAR-10 در حافظه و augmentation برداری (برش تصادفی و قرینه‌ی افقی) |
+| train.py | حلقه‌ی آموزش: AdamW از timm، زمان‌بندی cosine با warmup، label smoothing، ثبت Loss و Accuracy در هر epoch |
+| run_experiments.sh | تمام اجراهای آموزشی این گزارش |
+| bn_vs_ln_analysis.py | آزمایش‌های BN و LN که به آموزش نیاز ندارند (روی مدل‌های آموزش‌دیده) |
+| plot_results.py | رسم نمودارها و جدول خلاصه |
+| MobileNetV4_UIB_CIFAR10.ipynb | نوت‌بوک قابل اجرا در Colab |
+| results/ , checkpoints/ | تاریخچه‌ی هر epoch به صورت JSON، لاگ‌ها، نمودارها و وزن‌های آموزش‌دیده |
 
 </div>
 
 ```
-src/models.py              ConvNeXt-UIB model (UIB block from timm) + selectable normalisation layer
-src/data.py                CIFAR-10 held in memory + batched augmentation (random crop + flip)
-src/plotstyle.py           shared plot style
-train.py                   training loop: timm AdamW + cosine/warmup + label smoothing, JSON log per epoch
-run_experiments.sh         every training run in this report
-bn_vs_ln_analysis.py       BN vs LN analysis (no training; uses the trained checkpoints)
-plot_results.py            figures + results/summary.md
-MobileNetV4_UIB_CIFAR10.ipynb  notebook (Colab-ready) that shows the model, training and results
-results/                   per-epoch JSON histories, logs, figures
-checkpoints/               trained weights of the two main models (BN and LN)
-```
-
-```bash
 pip install -r requirements.txt
-```
-
-```bash
 python train.py --data ./data --norm bn --epochs 30 --out results/main_bn.json
-```
-
-```bash
-CIFAR_ROOT=./data ./run_experiments.sh && python bn_vs_ln_analysis.py --data ./data && python plot_results.py
+CIFAR_ROOT=./data ./run_experiments.sh
+python bn_vs_ln_analysis.py --data ./data && python plot_results.py
 ```
 
 <div dir="rtl">
 
-تمام اجراها روی یک CPU چهار هسته‌ای (بدون GPU) انجام شد؛ به همین دلیل مدل کوچک (۱٫۹ میلیون پارامتر) و ۳۰ epoch انتخاب شد. روی GPU (مثلاً Colab) همان دستورات بدون تغییر اجرا می‌شوند.
+همه‌ی اجراها روی یک CPU چهار هسته‌ای و بدون GPU انجام شد. به همین دلیل یک مدل کوچک و ۳۰ epoch انتخاب شد. روی GPU (مثلاً Colab) همین دستورات بدون تغییر اجرا می‌شوند.
 
-<a id="uib"></a>
 ## ۳. بلوک UIB در MobileNetV4
 
-بلوک **Universal Inverted Bottleneck (UIB)** در مقاله‌ی MobileNetV4 معرفی شد و تعمیم بلوک Inverted Bottleneck در MobileNetV2 است. ساختار پایه‌ی آن این است:
+بلوک UIB در مقاله‌ی MobileNetV4 معرفی شد و تعمیم بلوک Inverted Bottleneck در MobileNetV2 است. هسته‌ی آن یک کانولوشن ۱×۱ برای افزایش کانال‌ها (expansion) و یک کانولوشن ۱×۱ برای کاهش آن‌ها (projection) است. دو کانولوشن depth-wise اختیاری هم دارد: یکی **قبل از** expansion و دیگری **بین** expansion و projection:
 
 </div>
 
 ```
-x ──► [DW k×k (اختیاری، start)] ──► PW expand (×e) + act ──► [DW k×k (اختیاری، mid)] + act ──► PW project ──► LayerScale ──► DropPath ──►(+)──► y
- └──────────────────────────────────────────────── skip (if in == out and stride == 1) ─────────────────────────────────────────────────┘
+x -> [DW kxk (start, optional)] -> PW expand (xE) + act -> [DW kxk (mid, optional)] + act -> PW project -> LayerScale -> DropPath -> (+x) -> y
 ```
 
 <div dir="rtl">
 
-با روشن یا خاموش کردن دو کانولوشن depth-wise اختیاری، چهار بلوک شناخته‌شده از یک کد واحد به دست می‌آیند:
+با روشن یا خاموش کردن این دو کانولوشن، چهار بلوک شناخته‌شده از یک کد واحد به دست می‌آیند:
 
 | نوع | DW شروع | DW میانی | معادل |
 |---|---|---|---|
-| **ConvNeXt-like** | ✓ | ✗ | بلوک ConvNeXt: DW بزرگ روی کانال‌های کم، سپس MLP |
-| **ExtraDW** | ✓ | ✓ | نوآوری MobileNetV4: میدان دید بزرگ‌تر با هزینه‌ی کم |
-| **IB** | ✗ | ✓ | بلوک Inverted Bottleneck در MobileNetV2 |
-| **FFN** | ✗ | ✗ | بلوک FFN در ترنسفورمرها (دو کانولوشن ۱×۱) |
+| ConvNeXt-like | ✓ | ✗ | بلوک ConvNeXt: DW بزرگ روی کانال‌های کم، سپس MLP |
+| ExtraDW | ✓ | ✓ | نوآوری MobileNetV4: میدان دید بزرگ‌تر با هزینه‌ی کم |
+| IB | ✗ | ✓ | Inverted Bottleneck در MobileNetV2 |
+| FFN | ✗ | ✗ | FFN در ترنسفورمرها (دو کانولوشن ۱×۱) |
 
-در این تمرین از پیاده‌سازی رسمی timm استفاده شده است: `timm.models._efficientnet_blocks.UniversalInvertedResidual`، یعنی همان کلاسی که مدل‌های `mobilenetv4_*` کتابخانه‌ی timm با آن ساخته می‌شوند. در timm هر کانولوشن داخل UIB یک `ConvNormAct` است، پس بر خلاف ConvNeXt اصلی (که تنها یک LN پس از DW دارد) **بعد از هر کانولوشن یک لایه‌ی نرمال‌سازی** قرار می‌گیرد. در نتیجه نوع نرمال‌سازی در کل شبکه اثر زیادی دارد و برای مقایسه‌ی BN و LN مناسب است.
+در این تمرین از پیاده‌سازی timm استفاده شد: `timm.models._efficientnet_blocks.UniversalInvertedResidual`، یعنی همان کلاسی که مدل‌های `mobilenetv4_*` در timm با آن ساخته شده‌اند. در timm هر کانولوشن داخل UIB یک `ConvNormAct` است. پس برخلاف ConvNeXt اصلی که فقط یک LN بعد از DW دارد، **بعد از هر کانولوشن یک لایه‌ی نرمال‌سازی** هست. در نتیجه نوع نرمال‌سازی روی کل شبکه اثر زیادی دارد و این ساختار برای مقایسه‌ی BN و LN مناسب است.
 
-<a id="arch"></a>
 ## ۴. معماری پیاده‌سازی‌شده: ConvNeXt-UIB
 
-ساختار کلی (macro architecture) دقیقاً مانند ConvNeXt است و هر بلوک ConvNeXt با یک UIB در حالت ConvNeXt-like (`dw_start=7, dw_mid=0, exp_ratio=4`) جایگزین شده است:
+ساختار کلی شبکه همان ConvNeXt است و هر بلوک ConvNeXt با یک UIB در حالت ConvNeXt-like (`dw_kernel_size_start=7`، `dw_kernel_size_mid=0`، `exp_ratio=4`) جایگزین شده است:
 
-| بخش | جزئیات | خروجی (برای ورودی ۳۲×۳۲) |
+| بخش | جزئیات | خروجی |
 |---|---|---|
-| Stem | patchify: کانولوشن ۲×۲ با stride ۲، سپس Norm (در ConvNeXt روی ImageNet این لایه ۴×۴/۴ است؛ برای تصاویر ۳۲×۳۲ از ۲×۲/۲ استفاده شد) | ۳۲×۱۶×۱۶ |
-| Stage 1 | ۲ × UIB(ConvNeXt-like، DW 7×7، expansion 4) | ۳۲×۱۶×۱۶ |
-| Downsample | Norm ← Conv 2×2/2 | |
-| Stage 2 | ۲ × UIB | ۶۴×۸×۸ |
-| Downsample | Norm ← Conv 2×2/2 | |
-| Stage 3 | ۴ × UIB | ۱۲۸×۴×۴ |
-| Downsample | Norm ← Conv 2×2/2 | |
-| Stage 4 | ۲ × UIB | ۲۵۶×۲×۲ |
-| Head | Global Average Pooling ← Norm ← Linear(10) | ۱۰ |
+| Stem | patchify: Conv 2×2 با stride ۲، سپس Norm (در ConvNeXt برای ImageNet این لایه 4×4/4 است) | 32×16×16 |
+| Stage 1 | ۲ بلوک UIB (DW 7×7، expansion ×4، GELU) | 32×16×16 |
+| Stage 2 | Downsample (Norm و Conv 2×2/2) و ۲ بلوک UIB | 64×8×8 |
+| Stage 3 | Downsample و ۴ بلوک UIB | 128×4×4 |
+| Stage 4 | Downsample و ۲ بلوک UIB | 256×2×2 |
+| Head | Global Average Pooling، Norm و Linear(10) | 10 |
 
-- تابع فعال‌سازی GELU (مانند ConvNeXt)، LayerScale با مقدار اولیه‌ی ۱e-6 و Stochastic Depth (DropPath) با نرخ خطی تا ۰٫۱.
-- تعداد پارامترها: **۱٫۹۱ میلیون**.
-- نوع نرمال‌سازی با یک آرگومان انتخاب می‌شود و در stem، تمام UIBها، لایه‌های downsample و head یکسان است:
-  - `bn`: `BatchNorm2d` (و `BatchNorm1d` در head)
-  - `ln`: `timm.layers.LayerNorm2d`، یعنی LayerNorm روی بعد کانال در هر پیکسل (channels-first، همان LN استفاده‌شده در ConvNeXt)
-  - `gn1`: `GroupNorm` با یک گروه (LN روی C,H,W)؛ و `none`: بدون نرمال‌سازی
+- تابع فعال‌سازی GELU (مانند ConvNeXt)، LayerScale با مقدار اولیه‌ی 1e-6، و Stochastic Depth (DropPath) با نرخ خطی تا ۰٫۱
+- تعداد پارامترها: ۱٫۹۰۷ میلیون (برای BN و LN یکسان)
+- نوع نرمال‌سازی با آرگومان `norm` انتخاب می‌شود و در stem، همه‌ی UIBها، لایه‌های downsample و head یکسان است:
+- `bn`: BatchNorm2d (و BatchNorm1d در head)؛ `ln`: LayerNorm2d از timm، یعنی LN روی بعد کانال در هر پیکسل (همان LN در ConvNeXt)؛ `gn1`: GroupNorm با یک گروه؛ `none`: بدون نرمال‌سازی
 
-<a id="data"></a>
-## ۵. داده و پیش‌پردازش
+## ۵. داده و حلقه‌ی آموزش
 
-- CIFAR-10: ۵۰٬۰۰۰ تصویر آموزش و ۱۰٬۰۰۰ تصویر آزمون، ۳۲×۳۲، ۱۰ کلاس. فایل اصلی `cifar-10-python.tar.gz` استفاده شد (md5 = `c58f30108f718f92721af3b95e74349a`، برابر با فایل رسمی).
-- کل داده به صورت tensor در حافظه نگه داشته می‌شود و augmentation (برش تصادفی با padding چهارپیکسلی از نوع reflect و قرینه‌ی افقی با احتمال ۰٫۵) به صورت برداری روی کل batch انجام می‌شود. با این کار به workerهای DataLoader نیازی نیست و همه‌ی هسته‌های CPU صرف مدل می‌شوند (زمان آماده‌سازی داده در هر epoch حدود ۰٫۶ ثانیه است).
-- نرمال‌سازی ورودی با میانگین و انحراف معیار کانال‌های CIFAR-10.
+### ۵-۱. مجموعه‌داده‌ی CIFAR-10
 
-<a id="train"></a>
-## ۶. حلقه‌ی آموزش
+- ۶۰٬۰۰۰ تصویر رنگی ۳۲×۳۲ در ۱۰ کلاس (هواپیما، خودرو، پرنده، گربه، گوزن، سگ، قورباغه، اسب، کشتی، کامیون)
+- ۵۰٬۰۰۰ تصویر برای آموزش و ۱۰٬۰۰۰ تصویر برای آزمون. از فایل اصلی cifar-10-python.tar.gz استفاده شد (md5 برابر با نسخه‌ی رسمی).
+- augmentation: برش تصادفی ۳۲×۳۲ پس از padding چهار پیکسلی (reflect) و قرینه‌ی افقی با احتمال ۰٫۵. ورودی با میانگین و انحراف معیار کانال‌های CIFAR-10 نرمال شد.
+- کل داده در حافظه نگه داشته می‌شود و augmentation به صورت برداری روی کل batch انجام می‌شود. با این کار به worker برای DataLoader نیازی نیست و همه‌ی هسته‌های CPU صرف مدل می‌شوند.
+
+### ۵-۲. تنظیمات آموزش
 
 | تنظیم | مقدار |
 |---|---|
-| بهینه‌ساز | AdamW از طریق `timm.optim.create_optimizer_v2` (bias و پارامترهای نرمال‌سازی بدون weight decay) |
-| نرخ یادگیری | 2e-3، با warmup خطی ۲ epoch و سپس cosine تا 1e-6 (`timm.scheduler.CosineLRScheduler`، به‌روزرسانی در هر step) |
+| بهینه‌ساز | AdamW با timm.optim.create_optimizer_v2 (بدون weight decay برای bias و پارامترهای نرمال‌سازی) |
+| نرخ یادگیری | 2e-3؛ warmup خطی ۲ epoch، سپس cosine تا 1e-6 (timm CosineLRScheduler، به‌روزرسانی در هر step) |
 | weight decay | 0.05 |
-| batch size | 128 |
-| تعداد epoch | 30 |
-| تابع هزینه | `timm.loss.LabelSmoothingCrossEntropy(0.1)` برای آموزش، cross-entropy ساده برای ارزیابی |
-| معیارها | `timm.utils.accuracy` و `AverageMeter`، ذخیره‌ی Loss و Accuracy آموزش و آزمون در هر epoch |
-| حافظه | channels_last (در CPU سرعت BN را حدود ۲ برابر کرد: ۵۱۰ ← ۲۵۱ میلی‌ثانیه در هر step) |
+| batch size و تعداد epoch | 128 و 30 (۳۹۰ step در هر epoch) |
+| تابع هزینه | LabelSmoothingCrossEntropy(0.1) از timm در آموزش و cross-entropy ساده در ارزیابی |
+| معیارها | Loss و Accuracy آموزش و آزمون در هر epoch (timm.utils.accuracy و AverageMeter) |
+| قالب حافظه | channels_last: در CPU سرعت BN را حدود ۲ برابر کرد (510 به 251 میلی‌ثانیه در هر step) |
 
-![lr](results/figures/lr_schedule.png)
+![شکل ۱: نرخ یادگیری در طول آموزش (warmup و سپس cosine)](results/figures/lr_schedule.png)
 
-<a id="exp1"></a>
-## ۷. آزمایش ۱: آموزش اصلی و روند Loss و Accuracy
+*شکل ۱: نرخ یادگیری در طول آموزش (warmup و سپس cosine)*
 
-%%EXP1%%
+## ۶. آزمایش ۱: آموزش اصلی و روند Loss و Accuracy
 
-<a id="theory"></a>
-## ۸. تحقیق: تفاوت BatchNorm و LayerNorm
+| نرمال‌سازی | دقت آزمون نهایی | بهترین دقت آزمون | دقت آموزش | Loss آزمون | Loss آموزش | ثانیه در هر epoch |
+|---|---|---|---|---|---|---|
+| BatchNorm | 87.49 | 87.49 | 93.81 | 0.439 | 0.655 | 107 |
+| LayerNorm2d | 81.05 | 81.05 | 86.09 | 0.607 | 0.819 | 102 |
 
-### ۸-۱. تعریف
+![شکل ۲: Loss و Accuracy آموزش (خط‌چین) و آزمون (خط پر) در هر epoch](results/figures/main_curves.png)
 
-هر دو لایه یک عمل یکسان انجام می‌دهند و تفاوت فقط در **مجموعه‌ای است که میانگین و واریانس روی آن حساب می‌شود**:
+*شکل ۲: Loss و Accuracy آموزش (خط‌چین) و آزمون (خط پر) در هر epoch*
+
+روند تغییرات در چند epoch منتخب:
+
+| epoch | BN train loss | BN train acc | BN test loss | BN test acc | LN train loss | LN train acc | LN test loss | LN test acc |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 1.864 | 36.9 | 1.445 | 49.1 | 1.907 | 34.0 | 1.512 | 46.1 |
+| 2 | 1.573 | 51.1 | 1.221 | 57.3 | 1.656 | 46.1 | 1.324 | 52.4 |
+| 5 | 1.224 | 68.0 | 0.862 | 71.4 | 1.373 | 60.1 | 1.078 | 62.4 |
+| 10 | 1.006 | 78.2 | 0.642 | 79.8 | 1.188 | 69.2 | 0.858 | 70.9 |
+| 15 | 0.872 | 84.0 | 0.532 | 83.8 | 1.060 | 74.9 | 0.725 | 76.0 |
+| 20 | 0.762 | 88.8 | 0.482 | 85.5 | 0.941 | 80.6 | 0.665 | 78.7 |
+| 25 | 0.681 | 92.6 | 0.445 | 87.4 | 0.852 | 84.6 | 0.614 | 80.7 |
+| 30 | 0.655 | 93.8 | 0.439 | 87.5 | 0.819 | 86.1 | 0.607 | 81.0 |
+
+### تحلیل
+
+- هر دو مدل بدون مشکل آموزش دیدند و Loss به صورت یکنواخت کم شد. افزایش دقت در epochهای پایانی با کاهش نرخ یادگیری در زمان‌بندی cosine هم‌زمان است.
+- BN از همان epoch اول جلوتر است (۴۹٫۱۴٪ در برابر ۴۶٫۱۴٪) و فاصله در epoch دهم به بیشترین مقدار می‌رسد (حدود ۹ واحد). در پایان فاصله ۶٫۴ واحد است.
+- دقت آموزش LN (۸۶٫۰۹٪) هم کمتر از BN (۹۳٫۸۱٪) است. پس LN در این بودجه‌ی ۳۰ epoch **کم‌برازش (underfit)** است و مشکل آن تعمیم‌پذیری نیست. این با تجربه‌ی ConvNeXt سازگار است: آن‌جا LN فقط با آموزش طولانی (۳۰۰ epoch) و augmentation قوی به دقت BN رسید یا کمی از آن بهتر شد.
+- Loss آموزش از Loss آزمون بیشتر است، چون Loss آموزش شامل label smoothing (حداقل آن حدود ۰٫۵ است) و DropPath و augmentation است، ولی Loss آزمون cross-entropy ساده روی تصاویر بدون تغییر است.
+- فاصله‌ی دقت آموزش و آزمون در BN حدود ۶ واحد و در LN حدود ۵ واحد است، یعنی overfitting شدیدی در هیچ‌کدام دیده نمی‌شود.
+- زمان هر epoch روی CPU برای BN و LN تقریباً برابر است (107 و 102 ثانیه). بدون channels_last آموزش با BN دو برابر کندتر بود، زیرا backward لایه‌ی BatchNorm در PyTorch روی CPU در قالب NCHW بهینه نیست. روی GPU معمولاً BN کم‌هزینه‌تر است.
+
+## ۷. تحقیق: تفاوت BatchNorm و LayerNorm
+
+### ۷-۱. تعریف
+
+هر دو لایه یک کار را انجام می‌دهند: از ورودی میانگین کم می‌کنند، بر انحراف معیار تقسیم می‌کنند و سپس یک تبدیل خطی یادگرفتنی (γ و β) اعمال می‌کنند. تفاوت فقط در **مجموعه‌ای از مقادیر است که میانگین و واریانس روی آن حساب می‌شود** (S):
 
 </div>
 
-$$\hat{x} = \frac{x - \mu_{\mathcal{S}}}{\sqrt{\sigma^2_{\mathcal{S}} + \epsilon}}, \qquad y = \gamma\,\hat{x} + \beta$$
+```
+x̂ = (x − μ_S) / √(σ²_S + ε)        y = γ · x̂ + β
+```
 
 <div dir="rtl">
 
-برای یک tensor با ابعاد (N, C, H, W):
+| لایه | مجموعه‌ی آماری S برای tensor با ابعاد (N, C, H, W) | تعداد جفت (μ, σ²) برای N=8، C=16، H=W=6 |
+|---|---|---|
+| BatchNorm2d | برای هر کانال، روی (N, H, W): همه‌ی نمونه‌های batch | 16 |
+| LayerNorm2d (ConvNeXt) | برای هر نمونه و هر پیکسل، روی C | 288 |
+| LayerNorm (ترنسفورمر) | برای هر نمونه یا توکن، روی بعد ویژگی‌ها | — |
+| GroupNorm(1) | برای هر نمونه، روی (C, H, W) | 8 |
 
-| لایه | مجموعه‌ی آماری $\mathcal{S}$ | تعداد (μ, σ²) برای N=8, C=16, H=W=6 | γ و β |
-|---|---|---|---|
-| **BatchNorm2d** | برای هر کانال c، روی (N, H, W): **همه‌ی نمونه‌های batch** | 16 | برای هر کانال |
-| **LayerNorm2d** (ConvNeXt) | برای هر نمونه و هر پیکسل (n, h, w)، روی C | 288 | برای هر کانال |
-| **LayerNorm** (ترنسفورمر/ MLP) | برای هر نمونه (یا هر توکن)، روی بعد ویژگی | — | برای هر ویژگی |
-| **GroupNorm(1)** | برای هر نمونه، روی (C, H, W) | 8 | برای هر کانال |
+![شکل ۳: عناصری که میانگین و واریانس مشترک دارند (رنگی). فقط BN نمونه‌های مختلف batch را با هم ترکیب می‌کند.](results/figures/norm_axes.png)
 
-![axes](results/figures/norm_axes.png)
+*شکل ۳: عناصری که میانگین و واریانس مشترک دارند (رنگی). فقط BN نمونه‌های مختلف batch را با هم ترکیب می‌کند.*
 
-درستی این تعاریف در `bn_vs_ln_analysis.py` با مقایسه‌ی خروجی لایه‌های PyTorch/timm و فرمول دستی بررسی شده است (بیشترین اختلاف حدود 1e-7، یعنی خطای گردکردن float32).
+درستی این تعاریف در `bn_vs_ln_analysis.py` با مقایسه‌ی خروجی لایه‌های PyTorch و timm با فرمول دستی بررسی شد. بیشترین اختلاف حدود 5e-7 بود که همان خطای گرد کردن float32 است.
 
-### ۸-۲. تفاوت‌های اصلی
+### ۷-۲. تفاوت‌های اصلی
 
 | ویژگی | BatchNorm | LayerNorm |
 |---|---|---|
-| وابستگی به نمونه‌های دیگر batch | **دارد**: خروجی یک تصویر به بقیه‌ی تصاویر batch بستگی دارد | **ندارد**: هر نمونه مستقل نرمال می‌شود |
-| رفتار در آموزش و آزمون | **متفاوت**: آموزش با آمار batch، آزمون با میانگین متحرک (running mean/var) | **یکسان** |
-| batch کوچک | تخمین آماری پرنویز، کاهش دقت؛ batch=1 (با یک مقدار در هر کانال) اصلاً ممکن نیست | بدون مشکل |
-| آموزش توزیع‌شده | برای batch کوچک روی هر GPU به SyncBN نیاز دارد | نیازی ندارد |
-| داده‌های دنباله‌ای با طول متغیر (RNN و ترنسفورمر) | نامناسب | استاندارد |
-| هزینه‌ی inference | **صفر**: آمار ثابت است و در وزن و bias کانولوشن قبلی ادغام (fold) می‌شود | آمار به ورودی بستگی دارد و قابل ادغام نیست؛ محاسبه‌ی اضافه در هر لایه |
-| اثر تنظیم‌کنندگی (regularization) | دارد: نویز ناشی از آمار batch | ندارد |
-| کاربرد رایج | CNNها: ResNet، EfficientNet، **MobileNetV4** | ترنسفورمرها، ViT، **ConvNeXt** |
+| وابستگی به نمونه‌های دیگر batch | دارد: خروجی هر تصویر به بقیه‌ی تصاویر batch بستگی دارد | ندارد: هر نمونه مستقل نرمال می‌شود |
+| رفتار در آموزش و آزمون | متفاوت: آموزش با آمار batch، آزمون با میانگین متحرک (running mean/var) | یکسان |
+| batch کوچک | تخمین آماری پرنویز و افت دقت؛ batch با اندازه‌ی ۱ در head ممکن نیست | بدون مشکل |
+| آموزش توزیع‌شده | با batch کوچک روی هر GPU به SyncBatchNorm نیاز دارد | نیازی ندارد |
+| دنباله‌ها با طول متغیر (RNN، ترنسفورمر) | نامناسب | استاندارد |
+| هزینه‌ی inference | تقریباً صفر: در کانولوشن قبلی ادغام می‌شود | آمار به ورودی وابسته است و ادغام ممکن نیست |
+| اثر regularization | دارد (نویز آمار batch) | ندارد |
+| کاربرد رایج | CNNها: ResNet، EfficientNet، MobileNetV4 | ترنسفورمرها، ViT، ConvNeXt |
 
-### ۸-۳. چرا هر کدام کار می‌کنند؟
+### ۷-۳. چرا هر کدام کار می‌کنند؟
 
-- **BatchNorm** (Ioffe & Szegedy, 2015): هدف اولیه کاهش «internal covariate shift» بیان شد. پژوهش‌های بعدی (Santurkar et al., 2018) نشان دادند دلیل اصلی بیشتر **هموارتر شدن سطح loss** و پایدارتر شدن گرادیان است که امکان استفاده از نرخ یادگیری بزرگ‌تر را می‌دهد. نویز آمار batch نیز نوعی regularization است.
-- **LayerNorm** (Ba et al., 2016): برای RNNها معرفی شد، چون در آن‌ها آمار batch در طول زمان معنای ثابتی ندارد. در ترنسفورمرها استاندارد شد. ConvNeXt (Liu et al., 2022) نشان داد که در یک CNN مدرن، جایگزینی BN با LN مشکلی ایجاد نمی‌کند و دقت ImageNet را کمی بالاتر می‌برد (۸۱٫۴٪ ← ۸۱٫۵٪).
-- **MobileNetV4** با وجود الهام از ConvNeXt از BatchNorm استفاده می‌کند، چون هدفش سرعت روی سخت‌افزار موبایل است و BN در زمان inference کاملاً در کانولوشن ادغام می‌شود.
+- **BatchNorm** (Ioffe و Szegedy، ۲۰۱۵) با هدف کاهش «internal covariate shift» معرفی شد. پژوهش‌های بعدی (Santurkar و همکاران، ۲۰۱۸) نشان دادند که دلیل اصلی موفقیت آن بیشتر **هموارتر شدن سطح Loss** و پایداری گرادیان است. این ویژگی اجازه‌ی نرخ یادگیری بزرگ‌تر را می‌دهد. نویز آمار batch هم نوعی regularization است.
+- **LayerNorm** (Ba و همکاران، ۲۰۱۶) برای RNNها معرفی شد، چون در آن‌ها آمار batch در طول زمان معنای ثابتی ندارد. بعد در ترنسفورمرها استاندارد شد. ConvNeXt (Liu و همکاران، ۲۰۲۲) نشان داد که در یک CNN مدرن، جایگزینی BN با LN مشکلی ایجاد نمی‌کند و دقت ImageNet را کمی بالا می‌برد (۸۱٫۴٪ به ۸۱٫۵٪).
+- **MobileNetV4** با اینکه از ConvNeXt الهام گرفته، از BatchNorm استفاده می‌کند. هدف آن سرعت روی سخت‌افزار موبایل است و BN در زمان inference کاملاً در کانولوشن ادغام می‌شود.
 
-<a id="exp2"></a>
-## ۹. آزمایش ۲: حساسیت به اندازه‌ی batch
+## ۸. آزمایش ۲: حساسیت به اندازه‌ی batch
 
-%%EXP2%%
+مهم‌ترین تفاوت عملی BN و LN وابستگی BN به اندازه‌ی batch است. برای بررسی آن، هر دو مدل با batch size برابر ۴، ۱۶ و ۱۲۸ آموزش داده شدند. به دلیل محدودیت CPU این آزمایش روی ۱۰٬۰۰۰ تصویر اول داده‌ی آموزش و برای ۱۰ epoch انجام شد. نرخ یادگیری با رابطه‌ی lr = 2e-3 · √(B/128) مقیاس شد و ارزیابی روی کل ۱۰٬۰۰۰ تصویر آزمون بود. برای BN دقت آزمون به دو روش گزارش شده است: با آمار running (حالت eval، روش معمول) و با آمار batch آزمون به اندازه‌ی batch آموزش.
 
-<a id="exp3"></a>
-## ۱۰. آزمایش ۳: تحلیل بدون آموزش
+(این آزمایش هنوز در حال اجراست.)
 
-%%EXP3%%
+## ۹. آزمایش ۳: تحلیل BN و LN روی مدل‌های آموزش‌دیده (بدون آموزش جدید)
 
-<a id="conclusion"></a>
-## ۱۱. جمع‌بندی
+### ۹-۱. وابستگی خروجی یک تصویر به بقیه‌ی batch
 
-%%CONCLUSION%%
+یک تصویر ثابت از داده‌ی آزمون، ۱۰ بار همراه با تصاویر تصادفی دیگر در یک batch قرار گرفت و مدل در حالت train (نرمال‌سازی با آمار batch) اجرا شد. نمودار، انحراف معیار نسبی logitهای همان یک تصویر در این ۱۰ اجرا را نشان می‌دهد.
 
-<a id="refs"></a>
-## ۱۲. منابع
+![شکل ۵: تغییر خروجی یک تصویر ثابت با تغییر بقیه‌ی تصاویر batch](results/figures/batch_dependence.png)
 
-1. D. Qin et al., *MobileNetV4: Universal Models for the Mobile Ecosystem*, ECCV 2024. arXiv:2404.10518
-2. Z. Liu et al., *A ConvNet for the 2020s* (ConvNeXt), CVPR 2022. arXiv:2201.03545
-3. S. Ioffe, C. Szegedy, *Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift*, ICML 2015.
-4. J. L. Ba, J. R. Kiros, G. E. Hinton, *Layer Normalization*, 2016. arXiv:1607.06450
-5. Y. Wu, K. He, *Group Normalization*, ECCV 2018.
-6. S. Santurkar et al., *How Does Batch Normalization Help Optimization?*, NeurIPS 2018.
-7. I. Loshchilov, F. Hutter, *Decoupled Weight Decay Regularization* (AdamW), ICLR 2019.
-8. R. Wightman, *PyTorch Image Models (timm)*, https://github.com/huggingface/pytorch-image-models
-9. A. Krizhevsky, *Learning Multiple Layers of Features from Tiny Images* (CIFAR-10), 2009.
+*شکل ۵: تغییر خروجی یک تصویر ثابت با تغییر بقیه‌ی تصاویر batch*
+
+- در BN با batch برابر ۲، تغییرات logitها حدود ۹۳٪ اندازه‌ی خود آن‌هاست و کلاس پیش‌بینی‌شده در ۴ اجرا از ۱۰ اجرا عوض شد. با batch برابر ۲۵۶ این مقدار به ۹٪ کاهش می‌یابد ولی صفر نمی‌شود.
+- در LN تغییرات دقیقاً صفر است: خروجی هر تصویر فقط به خود آن تصویر بستگی دارد.
+- این همان نویزی است که در آموزش نقش regularization دارد. همچنین دلیل آن است که در زمان آزمون باید از آمار running استفاده کرد.
+
+### ۹-۲. استفاده از آمار batch در زمان آزمون
+
+![شکل ۶: دقت آزمون مدل BN وقتی به جای آمار running از آمار batch آزمون استفاده شود](results/figures/bn_test_batch_stats.png)
+
+*شکل ۶: دقت آزمون مدل BN وقتی به جای آمار running از آمار batch آزمون استفاده شود*
+
+| حالت | batch آزمون ۲ | ۴ | ۱۶ | ۱۲۸ | ۱۰۰۰ |
+|---|---|---|---|---|---|
+| BN با آمار batch | 66.01 | 75.61 | 84.35 | 86.87 | 87.34 |
+| BN با آمار running (eval) | 87.49 | 87.49 | 87.49 | 87.49 | 87.49 |
+| LN (حالت train یا eval) | 81.05 | 81.05 | 81.05 | 81.05 | 81.05 |
+
+اگر مدل BN در زمان آزمون با آمار batch اجرا شود، دقت با batch برابر ۲ از ۸۷٫۴۹٪ به ۶۶٫۰۱٪ کاهش می‌یابد. پس قرار دادن مدل در حالت `model.eval()` برای BN ضروری است. این حالت در LN هیچ اثری ندارد. همچنین BN در حالت train با یک تصویر (batch=1) اصلاً اجرا نمی‌شود: `ValueError: Expected more than 1 value per channel when training, got ...`
+
+### ۹-۳. ادغام BN در کانولوشن (BN folding) و سرعت inference
+
+در حالت eval، BN یک تبدیل خطی ثابت برای هر کانال است: y = a·x + b. پس می‌توان آن را در وزن و bias کانولوشن قبلی ادغام کرد: W' = W · γ/√(σ²+ε) و b' = (b − μ) · γ/√(σ²+ε) + β. با این کار 30 لایه از 34 لایه‌ی BN مدل آموزش‌دیده حذف شد (۴ لایه‌ی باقی‌مانده در stem و downsample هستند). بیشترین اختلاف logitها 1.5e-06 بود و دقت آزمون دقیقاً ۸۷٫۴۹٪ باقی ماند. این ادغام برای LN ممکن نیست، چون μ و σ برای هر ورودی دوباره محاسبه می‌شوند.
+
+| مدل | NCHW (ms) | channels_last (ms) |
+|---|---|---|
+| BN | 27.2 | 16.7 |
+| BN پس از ادغام | 24.4 | 13.8 |
+| LN | 18.0 | 17.4 |
+
+زمان inference برای batch برابر ۳۲ روی CPU با ۲ thread اندازه‌گیری شد، هم‌زمان با اجرای آموزش دیگری روی هسته‌های دیگر. پس اعداد فقط برای مقایسه‌ی تقریبی هستند. با channels_last، مدل BN ادغام‌شده سریع‌ترین مدل است. روی سخت‌افزار موبایل و شتاب‌دهنده‌ها، که LN آن‌جا پشتیبانی بهینه ندارد، این تفاوت بیشتر است. به همین دلیل MobileNetV4 از BN استفاده می‌کند.
+
+## ۱۰. جمع‌بندی
+
+- شبکه‌ای با ساختار ConvNeXt و بلوک‌های UIB معماری MobileNetV4 (پیاده‌سازی timm) ساخته شد و با AdamW و زمان‌بندی cosine روی CIFAR-10 آموزش داده شد. با ۱٫۹۱ میلیون پارامتر و ۳۰ epoch روی CPU به **۸۷٫۴۹٪** دقت آزمون رسید.
+- در این تنظیمات BatchNorm از LayerNorm بهتر بود (۸۷٫۴۹٪ در برابر ۸۱٫۰۵٪). LN کندتر همگرا شد و در پایان آموزش هم کم‌برازش بود.
+- LN مستقل از batch است و در آموزش و آزمون رفتار یکسان دارد. BN به batch وابسته است، دو رفتار متفاوت دارد و با batch کوچک ضعیف می‌شود، ولی هزینه‌ی inference آن تقریباً صفر است.
+- پیشنهاد: برای CNNهای موبایل با batch معمولی BN انتخاب مناسب‌تری است (همان انتخاب MobileNetV4). وقتی batch کوچک است، داده‌ها دنباله‌ای‌اند یا رفتار یکسان در آموزش و آزمون مهم است، LN (یا GroupNorm) مناسب‌تر است.
+
+## منابع
+
+1. D. Qin et al., "MobileNetV4: Universal Models for the Mobile Ecosystem", ECCV 2024, arXiv:2404.10518
+2. Z. Liu et al., "A ConvNet for the 2020s" (ConvNeXt), CVPR 2022, arXiv:2201.03545
+3. S. Ioffe, C. Szegedy, "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift", ICML 2015
+4. J. L. Ba, J. R. Kiros, G. E. Hinton, "Layer Normalization", arXiv:1607.06450, 2016
+5. Y. Wu, K. He, "Group Normalization", ECCV 2018
+6. S. Santurkar et al., "How Does Batch Normalization Help Optimization?", NeurIPS 2018
+7. I. Loshchilov, F. Hutter, "Decoupled Weight Decay Regularization" (AdamW), ICLR 2019
+8. R. Wightman, "PyTorch Image Models (timm)", github.com/huggingface/pytorch-image-models
+9. A. Krizhevsky, "Learning Multiple Layers of Features from Tiny Images" (CIFAR-10), 2009
 
 </div>
