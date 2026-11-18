@@ -1,0 +1,19 @@
+<section id="training" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · کد</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;داده و حلقه‌ی آموزش در train.py</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<table style="width:640px;font-size:26px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:56%;text-align:left">مقدار</th><th style="width:44%;text-align:right">تنظیم</th></tr>
+<tr><td>AdamW (timm)</td><td>&#8235;بهینه‌ساز</td></tr>
+<tr><td>2e-3, wd = 0.05</td><td>lr</td></tr>
+<tr><td>2 ep warmup + cosine</td><td>&#8235;زمان‌بند</td></tr>
+<tr><td>128 × 30 epochs</td><td>Batch</td></tr>
+<tr><td>Label smoothing 0.1</td><td>&#8235;تابع هزینه</td></tr>
+<tr><td>crop + flip</td><td>Augmentation</td></tr>
+<tr><td>channels_last</td><td>&#8235;قالب حافظه</td></tr>
+</table>
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">optimizer = create_optimizer_v2(model, opt='adamw',<br>&nbsp;&nbsp;&nbsp;&nbsp;lr=args.lr, weight_decay=args.weight_decay)<br>scheduler = CosineLRScheduler(optimizer,<br>&nbsp;&nbsp;&nbsp;&nbsp;t_initial=epochs * steps_per_epoch, lr_min=1e-6,<br>&nbsp;&nbsp;&nbsp;&nbsp;warmup_t=int(2 * steps_per_epoch),<br>&nbsp;&nbsp;&nbsp;&nbsp;t_in_epochs=False)<br>train_criterion = LabelSmoothingCrossEntropy(0.1)<br><br>for x, y in train_loader:<br>&nbsp;&nbsp;out = model(x)<br>&nbsp;&nbsp;loss = train_criterion(out, y)<br>&nbsp;&nbsp;optimizer.zero_grad(set_to_none=True)<br>&nbsp;&nbsp;loss.backward()<br>&nbsp;&nbsp;optimizer.step()<br>&nbsp;&nbsp;scheduler.step_update(step)</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>حلقه‌ی آموزش در train.py است و تا جای ممکن از ابزارهای timm استفاده می‌کند. بهینه‌ساز AdamW با create_optimizer_v2 ساخته می‌شود؛ خوبی این تابع این است که برای bias و پارامترهای نرمال‌سازی weight decay نمی‌گذارد. نرخ یادگیری دو هزارم و weight decay پنج صدم است. زمان‌بند CosineLRScheduler از timm است: دو اپوک warmup خطی و بعد کاهش کسینوسی تا یک میلیونیم، و چون t_in_epochs را False گذاشته‌ام بعد از هر گام به‌روز می‌شود نه هر اپوک. تابع هزینه در آموزش Cross-Entropy با label smoothing یک‌دهم است و در ارزیابی Cross-Entropy ساده. در هر اپوک loss و دقت آموزش و آزمون ثبت و در یک فایل JSON ذخیره می‌شود. برای داده، کل CIFAR-10 را به‌صورت تنسور در حافظه نگه می‌دارم و augmentation، یعنی برش تصادفی بعد از چهار پیکسل padding و قرینه‌ی افقی، به‌صورت برداری روی کل batch انجام می‌شود؛ این کار روی CPU باعث می‌شود به worker نیاز نباشد و همه‌ی هسته‌ها صرف مدل شوند. قالب حافظه‌ی channels_last هم سرعت BatchNorm روی CPU را حدود دو برابر کرد. هر اپوک حدود ۱۰۵ ثانیه طول می‌کشد.</aside>
+</section>

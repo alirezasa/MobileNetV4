@@ -1,0 +1,307 @@
+<!doctype html><html lang="fa"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MobileNetV4 UIB — ارائه (BN در برابر LN)</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"><style>
+body{margin:0;background:#2b2f36;font-family:'Vazirmatn',Tahoma,sans-serif}
+.wrap{max-width:1280px;margin:32px auto;padding:0 16px}
+.frame{width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.frame>section{width:1920px;height:1080px;box-sizing:border-box;position:absolute;left:0;top:0;transform-origin:0 0}
+section *{margin:0;box-sizing:border-box}
+section table{border-collapse:collapse}section td,section th{border:1px solid #E2DED5;padding:.35em .6em}
+section aside{display:none}
+x-shape{display:block;flex:none}
+x-shape[kind=arrow-right]{clip-path:polygon(0 30%,60% 30%,60% 0,100% 50%,60% 100%,60% 70%,0 70%)}
+.notes{direction:rtl;text-align:right;background:#F7F5F0;color:#16233A;border-radius:8px;padding:16px 24px;margin:12px 0 48px;font-size:17px;line-height:1.9}
+.notes b{color:#0E7C7B}
+</style></head><body><div class="wrap"><div class="frame"><section id="cover" data-transition="fade" style="background:#16233A;color:#F7F5F0;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;CIFAR-10 · timm · AdamW</p>
+<h1 style="font-size:96px;font-weight:700;line-height:1.3">&#8235;ConvNeXt با بلوک‌های UIB معماری MobileNetV4</h1>
+<p style="font-size:32px;line-height:1.7;color:#C9D3E0">&#8235;پیاده‌سازی، آموزش روی CIFAR-10 و بررسی تفاوت BatchNorm و LayerNorm</p>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<p style="font-size:64px;font-weight:700;line-height:1.2">87.49%</p>
+<p style="font-size:28px;color:#C9D3E0">&#8235;دقت آزمون با BatchNorm</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<p style="font-size:64px;font-weight:700;line-height:1.2">81.05%</p>
+<p style="font-size:28px;color:#C9D3E0">&#8235;دقت آزمون با LayerNorm</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<p style="font-size:64px;font-weight:700;line-height:1.2">1.91M</p>
+<p style="font-size:28px;color:#C9D3E0">&#8235;پارامتر · 30 اپوک روی CPU</p>
+</div>
+</div>
+<aside>سلام. موضوع این پروژه دو بخش دارد. بخش اول ساخت یک شبکه با ساختار کلی ConvNeXt است که بلوک‌هایش بلوک UIB معماری MobileNetV4 هستند؛ پیاده‌سازی بلوک را از کتابخانه‌ی timm گرفتم و مدل را با بهینه‌ساز AdamW روی CIFAR-10 آموزش دادم. بخش دوم بررسی تفاوت BatchNorm و LayerNorm است: همین شبکه را یک بار با هر کدام آموزش دادم و چند آزمایش برای نشان دادن تفاوتشان انجام دادم. مدل ۱٫۹۱ میلیون پارامتر دارد و چون فقط CPU داشتم، ۳۰ اپوک آموزش داده شد. با BatchNorm به دقت ۸۷٫۵ درصد و با LayerNorm به ۸۱ درصد رسید. در ادامه اول بلوک UIB و معماری را توضیح می‌دهم، بعد کد و آموزش، و بعد سه آزمایش مقایسه‌ای را.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 1 — ConvNeXt با بلوک‌های UIB معماری MobileNetV4</b><br>سلام. موضوع این پروژه دو بخش دارد. بخش اول ساخت یک شبکه با ساختار کلی ConvNeXt است که بلوک‌هایش بلوک UIB معماری MobileNetV4 هستند؛ پیاده‌سازی بلوک را از کتابخانه‌ی timm گرفتم و مدل را با بهینه‌ساز AdamW روی CIFAR-10 آموزش دادم. بخش دوم بررسی تفاوت BatchNorm و LayerNorm است: همین شبکه را یک بار با هر کدام آموزش دادم و چند آزمایش برای نشان دادن تفاوتشان انجام دادم. مدل ۱٫۹۱ میلیون پارامتر دارد و چون فقط CPU داشتم، ۳۰ اپوک آموزش داده شد. با BatchNorm به دقت ۸۷٫۵ درصد و با LayerNorm به ۸۱ درصد رسید. در ادامه اول بلوک UIB و معماری را توضیح می‌دهم، بعد کد و آموزش، و بعد سه آزمایش مقایسه‌ای را.</div></div><div class="wrap"><div class="frame"><section id="uib" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۱ · معماری</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;بلوک Universal Inverted Bottleneck</h2>
+<div style="display:flex;flex-direction:row;gap:10px;align-items:center;text-align:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:2px dashed #0E7C7B;border-radius:12px;padding:18px 8px">
+<p style="font-size:28px;font-weight:700">DW k×k</p>
+<p style="font-size:24px;color:#4A5568">&#8235;شروع · اختیاری</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:18px 8px">
+<p style="font-size:28px;font-weight:700">PW 1×1</p>
+<p style="font-size:24px;color:#4A5568">expand ×4 + act</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:2px dashed #0E7C7B;border-radius:12px;padding:18px 8px">
+<p style="font-size:28px;font-weight:700">DW k×k</p>
+<p style="font-size:24px;color:#4A5568">&#8235;میانی · اختیاری</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:18px 8px">
+<p style="font-size:28px;font-weight:700">PW 1×1</p>
+<p style="font-size:24px;color:#4A5568">project</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#16233A;border-radius:12px;padding:18px 8px">
+<p style="font-size:28px;font-weight:700;color:#F7F5F0">+ x</p>
+<p style="font-size:24px;color:#C9D3E0">LayerScale, DropPath</p>
+</div>
+</div>
+<table style="font-size:28px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:46%;text-align:right">معادل</th><th style="width:16%">&#8235;DW میانی</th><th style="width:16%">&#8235;DW شروع</th><th style="width:22%;text-align:left">نوع</th></tr>
+<tr style="background:#E3F1EF"><td>&#8235;بلوک ConvNeXt (انتخاب این پروژه)</td><td>&#8235;ندارد</td><td>7×7</td><td>ConvNeXt-like</td></tr>
+<tr><td>&#8235;نوآوری MobileNetV4</td><td>3×3</td><td>k×k</td><td>ExtraDW</td></tr>
+<tr><td>&#8235;Inverted Bottleneck در MobileNetV2</td><td>3×3</td><td>&#8235;ندارد</td><td>IB</td></tr>
+<tr><td>&#8235;FFN در ترنسفورمرها</td><td>&#8235;ندارد</td><td>&#8235;ندارد</td><td>FFN</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>بلوک UIB در مقاله‌ی MobileNetV4 معرفی شد و تعمیم بلوک Inverted Bottleneck در MobileNetV2 است. هسته‌ی ثابت آن دو کانولوشن یک در یک است: اولی تعداد کانال‌ها را چهار برابر می‌کند که به آن expansion می‌گویند و دومی آن‌ها را به تعداد اولیه برمی‌گرداند که projection است. علاوه بر این دو، دو کانولوشن depth-wise اختیاری دارد که در شکل با خط‌چین نشان داده‌ام: یکی قبل از expansion و یکی بین expansion و projection. depth-wise یعنی هر کانال جداگانه فیلتر می‌شود و برای همین ارزان است. با روشن و خاموش کردن این دو، از یک کد واحد چهار بلوک شناخته‌شده به دست می‌آید که در جدول آمده: اگر فقط اولی روشن باشد، بلوک ConvNeXt است؛ اگر هر دو روشن باشند ExtraDW است که نوآوری خود MobileNetV4 است؛ اگر فقط میانی روشن باشد همان Inverted Bottleneck قدیمی است؛ و اگر هیچ‌کدام نباشند FFN ترنسفورمر است. به همین دلیل اسمش «جهانی» است. در این پروژه چون ساختار خواسته‌شده ConvNeXt بود، حالت اول را با کرنل هفت در هفت انتخاب کردم. در آخر بلوک هم LayerScale و DropPath و اتصال باقیمانده قرار دارد.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 2 — بلوک Universal Inverted Bottleneck</b><br>بلوک UIB در مقاله‌ی MobileNetV4 معرفی شد و تعمیم بلوک Inverted Bottleneck در MobileNetV2 است. هسته‌ی ثابت آن دو کانولوشن یک در یک است: اولی تعداد کانال‌ها را چهار برابر می‌کند که به آن expansion می‌گویند و دومی آن‌ها را به تعداد اولیه برمی‌گرداند که projection است. علاوه بر این دو، دو کانولوشن depth-wise اختیاری دارد که در شکل با خط‌چین نشان داده‌ام: یکی قبل از expansion و یکی بین expansion و projection. depth-wise یعنی هر کانال جداگانه فیلتر می‌شود و برای همین ارزان است. با روشن و خاموش کردن این دو، از یک کد واحد چهار بلوک شناخته‌شده به دست می‌آید که در جدول آمده: اگر فقط اولی روشن باشد، بلوک ConvNeXt است؛ اگر هر دو روشن باشند ExtraDW است که نوآوری خود MobileNetV4 است؛ اگر فقط میانی روشن باشد همان Inverted Bottleneck قدیمی است؛ و اگر هیچ‌کدام نباشند FFN ترنسفورمر است. به همین دلیل اسمش «جهانی» است. در این پروژه چون ساختار خواسته‌شده ConvNeXt بود، حالت اول را با کرنل هفت در هفت انتخاب کردم. در آخر بلوک هم LayerScale و DropPath و اتصال باقیمانده قرار دارد.</div></div><div class="wrap"><div class="frame"><section id="arch" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۱ · معماری</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;معماری ConvNeXt-UIB برای تصاویر 32×32</h2>
+<div style="display:flex;flex-direction:row;gap:10px;align-items:center;text-align:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stem</p>
+<p style="font-size:24px;color:#4A5568">Conv 2×2 / 2</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">32×16×16</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stage 1</p>
+<p style="font-size:24px;color:#4A5568">2 × UIB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">32×16×16</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stage 2</p>
+<p style="font-size:24px;color:#4A5568">2 × UIB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">64×8×8</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stage 3</p>
+<p style="font-size:24px;color:#4A5568">4 × UIB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">128×4×4</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stage 4</p>
+<p style="font-size:24px;color:#4A5568">2 × UIB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">256×2×2</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#16233A;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700;color:#F7F5F0">Head</p>
+<p style="font-size:24px;color:#C9D3E0">GAP, Norm</p>
+<p style="font-size:24px;color:#F2B544;font-weight:700">Linear(10)</p>
+</div>
+</div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;هر بلوک UIB</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;DW 7×7، expansion ×4، GELU، LayerScale با مقدار اولیه‌ی 1e-6 و DropPath خطی تا 0.1</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;Downsample بین Stageها</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;مثل ConvNeXt: یک Norm و سپس Conv 2×2 با stride 2؛ کانال دو برابر، ابعاد نصف</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;نرمال‌سازی قابل انتخاب</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;آرگومان norm: bn، ln، gn1 یا none؛ در stem، همه‌ی UIBها، downsample و head یکسان است</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>ساختار کلان شبکه همان ConvNeXt است. اول یک stem از نوع patchify داریم: در ConvNeXt اصلی برای ImageNet یک کانولوشن چهار در چهار با گام چهار است، ولی چون تصاویر CIFAR فقط ۳۲ در ۳۲ هستند آن را دو در دو با گام دو گذاشتم تا خروجی ۱۶ در ۱۶ شود. بعد چهار stage داریم با ۲، ۲، ۴ و ۲ بلوک UIB و تعداد کانال ۳۲، ۶۴، ۱۲۸ و ۲۵۶. بین stageها لایه‌ی downsample به سبک ConvNeXt است: یک نرمال‌سازی و بعد کانولوشن دو در دو با گام دو. در انتها Global Average Pooling، یک نرمال‌سازی و یک لایه‌ی خطی به ده کلاس. تابع فعال‌سازی GELU است، LayerScale با مقدار اولیه‌ی خیلی کوچک شروع می‌شود تا هر بلوک در ابتدا تقریباً همانی باشد، و DropPath یا Stochastic Depth به‌صورت خطی تا یک‌دهم زیاد می‌شود. نکته‌ی مهم برای بخش دوم پروژه این است که نوع نرمال‌سازی یک آرگومان است و همه‌جای شبکه با هم عوض می‌شود. چون در پیاده‌سازی timm بعد از هر کانولوشن داخل UIB یک لایه‌ی نرمال‌سازی هست، برخلاف ConvNeXt اصلی که فقط یکی دارد، نوع نرمال‌سازی روی کل شبکه اثر زیادی دارد و این ساختار برای مقایسه‌ی BN و LN مناسب است.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 3 — معماری ConvNeXt-UIB برای تصاویر 32×32</b><br>ساختار کلان شبکه همان ConvNeXt است. اول یک stem از نوع patchify داریم: در ConvNeXt اصلی برای ImageNet یک کانولوشن چهار در چهار با گام چهار است، ولی چون تصاویر CIFAR فقط ۳۲ در ۳۲ هستند آن را دو در دو با گام دو گذاشتم تا خروجی ۱۶ در ۱۶ شود. بعد چهار stage داریم با ۲، ۲، ۴ و ۲ بلوک UIB و تعداد کانال ۳۲، ۶۴، ۱۲۸ و ۲۵۶. بین stageها لایه‌ی downsample به سبک ConvNeXt است: یک نرمال‌سازی و بعد کانولوشن دو در دو با گام دو. در انتها Global Average Pooling، یک نرمال‌سازی و یک لایه‌ی خطی به ده کلاس. تابع فعال‌سازی GELU است، LayerScale با مقدار اولیه‌ی خیلی کوچک شروع می‌شود تا هر بلوک در ابتدا تقریباً همانی باشد، و DropPath یا Stochastic Depth به‌صورت خطی تا یک‌دهم زیاد می‌شود. نکته‌ی مهم برای بخش دوم پروژه این است که نوع نرمال‌سازی یک آرگومان است و همه‌جای شبکه با هم عوض می‌شود. چون در پیاده‌سازی timm بعد از هر کانولوشن داخل UIB یک لایه‌ی نرمال‌سازی هست، برخلاف ConvNeXt اصلی که فقط یکی دارد، نوع نرمال‌سازی روی کل شبکه اثر زیادی دارد و این ساختار برای مقایسه‌ی BN و LN مناسب است.</div></div><div class="wrap"><div class="frame"><section id="code" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · کد</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;کد مدل در src/models.py</h2>
+<div style="display:flex;flex-direction:row;gap:28px;align-items:stretch">
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.6;color:#E6EAF0;background:#16233A;border-radius:16px;padding:26px 28px;text-align:left;white-space:nowrap">from timm.models._efficientnet_blocks \<br>&nbsp;&nbsp;import UniversalInvertedResidual<br><br>UIB_VARIANTS = {&nbsp;&nbsp;# (dw_start, dw_mid)<br>&nbsp;&nbsp;'convnext': (None, 0),<br>&nbsp;&nbsp;'extra_dw': (None, 3),<br>&nbsp;&nbsp;'ib':&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (0, 3),<br>&nbsp;&nbsp;'ffn':&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (0, 0),<br>}<br><br>def get_norm_layers(norm):<br>&nbsp;&nbsp;if norm == 'bn':<br>&nbsp;&nbsp;&nbsp;&nbsp;return nn.BatchNorm2d, nn.BatchNorm1d<br>&nbsp;&nbsp;if norm == 'ln':<br>&nbsp;&nbsp;&nbsp;&nbsp;return LayerNorm2d, LayerNorm</p>
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.6;color:#E6EAF0;background:#16233A;border-radius:16px;padding:26px 28px;text-align:left;white-space:nowrap">for i, (d, c) in enumerate(zip(depths, dims)):<br>&nbsp;&nbsp;layers = []<br>&nbsp;&nbsp;if i > 0:&nbsp;&nbsp;# downsample: norm -> 2x2/2<br>&nbsp;&nbsp;&nbsp;&nbsp;layers += [norm2d(prev),<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nn.Conv2d(prev, c, 2, stride=2)]<br>&nbsp;&nbsp;for j in range(d):<br>&nbsp;&nbsp;&nbsp;&nbsp;layers.append(UniversalInvertedResidual(<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c, c,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dw_kernel_size_start=dw_start,&nbsp;# 7<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dw_kernel_size_mid=dw_mid,&nbsp;&nbsp;&nbsp;&nbsp; # 0<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exp_ratio=4.0, act_layer=nn.GELU,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;norm_layer=norm2d,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;drop_path_rate=dpr[cur + j],<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;layer_scale_init_value=1e-6))<br>&nbsp;&nbsp;self.stages.append(nn.Sequential(*layers))</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>کد مدل در فایل src/models.py است. بلوک UIB را خودم ننوشتم؛ طبق خواسته‌ی پروژه از timm وارد شده: کلاس UniversalInvertedResidual، یعنی همان کلاسی که مدل‌های mobilenetv4 در timm با آن ساخته می‌شوند. سمت چپ دو چیز کوچک است. دیکشنری UIB_VARIANTS چهار حالت بلوک را به اندازه‌ی کرنل دو کانولوشن depth-wise نگاشت می‌کند؛ صفر یعنی آن کانولوشن وجود ندارد و None یعنی از کرنل پیش‌فرض، که هفت است، استفاده شود. تابع get_norm_layers بر اساس یک رشته، کلاس نرمال‌سازی دوبعدی برای نقشه‌های ویژگی و یک‌بعدی برای head را برمی‌گرداند: برای bn کلاس‌های BatchNorm و برای ln کلاس LayerNorm2d از timm که روی بعد کانال در هر پیکسل نرمال می‌کند، همان LayerNorm در ConvNeXt. حالت‌های gn1 و none هم هست. سمت راست حلقه‌ی ساخت stageها در کلاس ConvNeXtUIB است: برای هر stage، اگر اولی نباشد لایه‌ی downsample اضافه می‌شود و بعد به تعداد عمق آن stage بلوک UIB ساخته می‌شود. همه‌ی آرگومان‌های مهم اینجا دیده می‌شوند: کرنل شروع هفت، کرنل میانی صفر، نسبت expansion چهار، GELU، کلاس نرمال‌سازی انتخاب‌شده، نرخ DropPath همان بلوک و مقدار اولیه‌ی LayerScale. پیکربندی tiny با عمق‌های ۲، ۲، ۴، ۲ و کانال‌های ۳۲ تا ۲۵۶ استفاده شده که ۱٫۹۱ میلیون پارامتر دارد.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 4 — کد مدل در src/models.py</b><br>کد مدل در فایل src/models.py است. بلوک UIB را خودم ننوشتم؛ طبق خواسته‌ی پروژه از timm وارد شده: کلاس UniversalInvertedResidual، یعنی همان کلاسی که مدل‌های mobilenetv4 در timm با آن ساخته می‌شوند. سمت چپ دو چیز کوچک است. دیکشنری UIB_VARIANTS چهار حالت بلوک را به اندازه‌ی کرنل دو کانولوشن depth-wise نگاشت می‌کند؛ صفر یعنی آن کانولوشن وجود ندارد و None یعنی از کرنل پیش‌فرض، که هفت است، استفاده شود. تابع get_norm_layers بر اساس یک رشته، کلاس نرمال‌سازی دوبعدی برای نقشه‌های ویژگی و یک‌بعدی برای head را برمی‌گرداند: برای bn کلاس‌های BatchNorm و برای ln کلاس LayerNorm2d از timm که روی بعد کانال در هر پیکسل نرمال می‌کند، همان LayerNorm در ConvNeXt. حالت‌های gn1 و none هم هست. سمت راست حلقه‌ی ساخت stageها در کلاس ConvNeXtUIB است: برای هر stage، اگر اولی نباشد لایه‌ی downsample اضافه می‌شود و بعد به تعداد عمق آن stage بلوک UIB ساخته می‌شود. همه‌ی آرگومان‌های مهم اینجا دیده می‌شوند: کرنل شروع هفت، کرنل میانی صفر، نسبت expansion چهار، GELU، کلاس نرمال‌سازی انتخاب‌شده، نرخ DropPath همان بلوک و مقدار اولیه‌ی LayerScale. پیکربندی tiny با عمق‌های ۲، ۲، ۴، ۲ و کانال‌های ۳۲ تا ۲۵۶ استفاده شده که ۱٫۹۱ میلیون پارامتر دارد.</div></div><div class="wrap"><div class="frame"><section id="training" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۲ · کد</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;داده و حلقه‌ی آموزش در train.py</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<table style="width:640px;font-size:26px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:56%;text-align:left">مقدار</th><th style="width:44%;text-align:right">تنظیم</th></tr>
+<tr><td>AdamW (timm)</td><td>&#8235;بهینه‌ساز</td></tr>
+<tr><td>2e-3, wd = 0.05</td><td>lr</td></tr>
+<tr><td>2 ep warmup + cosine</td><td>&#8235;زمان‌بند</td></tr>
+<tr><td>128 × 30 epochs</td><td>Batch</td></tr>
+<tr><td>Label smoothing 0.1</td><td>&#8235;تابع هزینه</td></tr>
+<tr><td>crop + flip</td><td>Augmentation</td></tr>
+<tr><td>channels_last</td><td>&#8235;قالب حافظه</td></tr>
+</table>
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.65;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">optimizer = create_optimizer_v2(model, opt='adamw',<br>&nbsp;&nbsp;&nbsp;&nbsp;lr=args.lr, weight_decay=args.weight_decay)<br>scheduler = CosineLRScheduler(optimizer,<br>&nbsp;&nbsp;&nbsp;&nbsp;t_initial=epochs * steps_per_epoch, lr_min=1e-6,<br>&nbsp;&nbsp;&nbsp;&nbsp;warmup_t=int(2 * steps_per_epoch),<br>&nbsp;&nbsp;&nbsp;&nbsp;t_in_epochs=False)<br>train_criterion = LabelSmoothingCrossEntropy(0.1)<br><br>for x, y in train_loader:<br>&nbsp;&nbsp;out = model(x)<br>&nbsp;&nbsp;loss = train_criterion(out, y)<br>&nbsp;&nbsp;optimizer.zero_grad(set_to_none=True)<br>&nbsp;&nbsp;loss.backward()<br>&nbsp;&nbsp;optimizer.step()<br>&nbsp;&nbsp;scheduler.step_update(step)</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>حلقه‌ی آموزش در train.py است و تا جای ممکن از ابزارهای timm استفاده می‌کند. بهینه‌ساز AdamW با create_optimizer_v2 ساخته می‌شود؛ خوبی این تابع این است که برای bias و پارامترهای نرمال‌سازی weight decay نمی‌گذارد. نرخ یادگیری دو هزارم و weight decay پنج صدم است. زمان‌بند CosineLRScheduler از timm است: دو اپوک warmup خطی و بعد کاهش کسینوسی تا یک میلیونیم، و چون t_in_epochs را False گذاشته‌ام بعد از هر گام به‌روز می‌شود نه هر اپوک. تابع هزینه در آموزش Cross-Entropy با label smoothing یک‌دهم است و در ارزیابی Cross-Entropy ساده. در هر اپوک loss و دقت آموزش و آزمون ثبت و در یک فایل JSON ذخیره می‌شود. برای داده، کل CIFAR-10 را به‌صورت تنسور در حافظه نگه می‌دارم و augmentation، یعنی برش تصادفی بعد از چهار پیکسل padding و قرینه‌ی افقی، به‌صورت برداری روی کل batch انجام می‌شود؛ این کار روی CPU باعث می‌شود به worker نیاز نباشد و همه‌ی هسته‌ها صرف مدل شوند. قالب حافظه‌ی channels_last هم سرعت BatchNorm روی CPU را حدود دو برابر کرد. هر اپوک حدود ۱۰۵ ثانیه طول می‌کشد.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 5 — داده و حلقه‌ی آموزش در train.py</b><br>حلقه‌ی آموزش در train.py است و تا جای ممکن از ابزارهای timm استفاده می‌کند. بهینه‌ساز AdamW با create_optimizer_v2 ساخته می‌شود؛ خوبی این تابع این است که برای bias و پارامترهای نرمال‌سازی weight decay نمی‌گذارد. نرخ یادگیری دو هزارم و weight decay پنج صدم است. زمان‌بند CosineLRScheduler از timm است: دو اپوک warmup خطی و بعد کاهش کسینوسی تا یک میلیونیم، و چون t_in_epochs را False گذاشته‌ام بعد از هر گام به‌روز می‌شود نه هر اپوک. تابع هزینه در آموزش Cross-Entropy با label smoothing یک‌دهم است و در ارزیابی Cross-Entropy ساده. در هر اپوک loss و دقت آموزش و آزمون ثبت و در یک فایل JSON ذخیره می‌شود. برای داده، کل CIFAR-10 را به‌صورت تنسور در حافظه نگه می‌دارم و augmentation، یعنی برش تصادفی بعد از چهار پیکسل padding و قرینه‌ی افقی، به‌صورت برداری روی کل batch انجام می‌شود؛ این کار روی CPU باعث می‌شود به worker نیاز نباشد و همه‌ی هسته‌ها صرف مدل شوند. قالب حافظه‌ی channels_last هم سرعت BatchNorm روی CPU را حدود دو برابر کرد. هر اپوک حدود ۱۰۵ ثانیه طول می‌کشد.</div></div><div class="wrap"><div class="frame"><section id="results" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آزمایش ۱ · آموزش اصلی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;روند Loss و Accuracy در 30 اپوک</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:row-reverse;gap:24px;align-items:baseline">
+<p style="font-size:64px;font-weight:700;line-height:1.2;color:#0E7C7B">87.49%</p>
+<p style="font-size:28px;color:#4A5568">BatchNorm</p>
+</div>
+<div style="display:flex;flex-direction:row-reverse;gap:24px;align-items:baseline">
+<p style="font-size:64px;font-weight:700;line-height:1.2">81.05%</p>
+<p style="font-size:28px;color:#4A5568">LayerNorm2d</p>
+</div>
+<div style="display:flex;flex-direction:row-reverse;gap:24px;align-items:baseline">
+<p style="font-size:64px;font-weight:700;line-height:1.2">81.58%</p>
+<p style="font-size:28px;color:#4A5568">GroupNorm(1)</p>
+</div>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;دقت آموزش LN هم پایین‌تر است (86.1% در برابر 93.8%)؛ پس فاصله از نوع کم‌برازش است، نه بیش‌برازش.</p>
+</div>
+<img src="../results/figures/main_curves.png" alt="منحنی Loss و Accuracy آموزش و آزمون برای BN، LN و GN" style="width:1000px;height:463px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>این نتیجه‌ی آموزش اصلی است: همان شبکه با همان تنظیمات، سه بار با سه نوع نرمال‌سازی. در نمودار خط‌چین آموزش و خط پر آزمون است. هر سه مدل بدون مشکل آموزش دیدند و loss یکنواخت کم شده. BatchNorm در پایان به ۸۷٫۴۹ درصد دقت آزمون رسید، LayerNorm به ۸۱٫۰۵ و GroupNorm با یک گروه به ۸۱٫۵۸ درصد. BN از همان اپوک اول جلوتر است و بیشترین فاصله، حدود نُه واحد، بین اپوک پنج تا ده است. نکته‌ی مهم تحلیل این است: دقت آموزش LN هم پایین‌تر از BN است، ۸۶ در برابر ۹۴ درصد. پس مشکل LN تعمیم‌پذیری نیست؛ در این بودجه‌ی کوتاه ۳۰ اپوکی کندتر همگرا شده و کم‌برازش است. این با تجربه‌ی مقاله‌ی ConvNeXt سازگار است که LN فقط با ۳۰۰ اپوک آموزش و augmentation قوی به BN رسید. یک نکته‌ی دیگر: loss آموزش از loss آزمون بیشتر است، چون loss آموزش شامل label smoothing و DropPath و augmentation است ولی loss آزمون Cross-Entropy ساده روی تصاویر تمیز است. آزمایش GroupNorm را هم برای این گذاشتم که ببینم مشکل LN از نرمال‌سازی جداگانه‌ی هر پیکسل است یا نه؛ نتیجه تقریباً یکی شد، پس هر دو روشِ مستقل از batch در آموزش کوتاه عقب‌ترند. هر آزمایش با یک seed اجرا شده، پس تفاوت‌های زیر یک واحد قطعی نیستند.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 6 — روند Loss و Accuracy در 30 اپوک</b><br>این نتیجه‌ی آموزش اصلی است: همان شبکه با همان تنظیمات، سه بار با سه نوع نرمال‌سازی. در نمودار خط‌چین آموزش و خط پر آزمون است. هر سه مدل بدون مشکل آموزش دیدند و loss یکنواخت کم شده. BatchNorm در پایان به ۸۷٫۴۹ درصد دقت آزمون رسید، LayerNorm به ۸۱٫۰۵ و GroupNorm با یک گروه به ۸۱٫۵۸ درصد. BN از همان اپوک اول جلوتر است و بیشترین فاصله، حدود نُه واحد، بین اپوک پنج تا ده است. نکته‌ی مهم تحلیل این است: دقت آموزش LN هم پایین‌تر از BN است، ۸۶ در برابر ۹۴ درصد. پس مشکل LN تعمیم‌پذیری نیست؛ در این بودجه‌ی کوتاه ۳۰ اپوکی کندتر همگرا شده و کم‌برازش است. این با تجربه‌ی مقاله‌ی ConvNeXt سازگار است که LN فقط با ۳۰۰ اپوک آموزش و augmentation قوی به BN رسید. یک نکته‌ی دیگر: loss آموزش از loss آزمون بیشتر است، چون loss آموزش شامل label smoothing و DropPath و augmentation است ولی loss آزمون Cross-Entropy ساده روی تصاویر تمیز است. آزمایش GroupNorm را هم برای این گذاشتم که ببینم مشکل LN از نرمال‌سازی جداگانه‌ی هر پیکسل است یا نه؛ نتیجه تقریباً یکی شد، پس هر دو روشِ مستقل از batch در آموزش کوتاه عقب‌ترند. هر آزمایش با یک seed اجرا شده، پس تفاوت‌های زیر یک واحد قطعی نیستند.</div></div><div class="wrap"><div class="frame"><section id="norm" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۳ · BN در برابر LN</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;یک فرمول، دو مجموعه‌ی آماری متفاوت</h2>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:32px;line-height:1.5;color:#16233A;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:20px 32px;text-align:center">y = γ · (x − μ_S) / √(σ²_S + ε) + β</p>
+<img src="../results/figures/norm_axes.png" alt="محورهایی که BatchNorm، LayerNorm و GroupNorm روی آن‌ها میانگین و واریانس می‌گیرند" style="width:1664px;height:330px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5;color:#0E7C7B">BatchNorm2d</h3>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;برای هر کانال، روی (N, H, W): همه‌ی نمونه‌های batch با هم.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5;color:#0E7C7B">LayerNorm2d</h3>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;برای هر نمونه و هر پیکسل، روی C: مستقل از بقیه‌ی batch.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5;color:#0E7C7B">GroupNorm(1)</h3>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;برای هر نمونه، روی (C, H, W).</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>حالا بخش تحقیقی پروژه. BatchNorm و LayerNorm هر دو دقیقاً یک کار می‌کنند: از ورودی میانگین کم می‌کنند، بر انحراف معیار تقسیم می‌کنند و بعد با دو پارامتر یادگرفتنی گاما و بتا مقیاس و جابه‌جا می‌کنند. تنها تفاوتشان این است که میانگین و واریانس روی کدام مجموعه از مقادیر حساب می‌شود. تنسور ما چهار بعد دارد: N تعداد نمونه، C کانال و H و W. BatchNorm برای هر کانال، روی همه‌ی نمونه‌های batch و همه‌ی پیکسل‌ها آمار می‌گیرد؛ پس به تعداد کانال‌ها میانگین داریم و مهم‌تر اینکه نمونه‌های مختلف batch با هم ترکیب می‌شوند. LayerNorm به سبک ConvNeXt برای هر نمونه و هر پیکسل، روی بعد کانال آمار می‌گیرد؛ پس هیچ اطلاعاتی بین نمونه‌ها رد و بدل نمی‌شود. GroupNorm با یک گروه هم برای هر نمونه روی کل C و H و W آمار می‌گیرد. شکل همین را نشان می‌دهد: خانه‌های رنگی آن‌هایی هستند که یک میانگین و واریانس مشترک دارند. در کد، فایل bn_vs_ln_analysis.py، خروجی لایه‌های PyTorch و timm را با فرمول دستی مقایسه کردم و اختلاف در حد خطای گرد کردن بود. همه‌ی تفاوت‌های عملی که در سه اسلاید بعد می‌بینیم از همین یک تفاوت می‌آید: BN به بقیه‌ی batch وابسته است و LN نیست.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 7 — یک فرمول، دو مجموعه‌ی آماری متفاوت</b><br>حالا بخش تحقیقی پروژه. BatchNorm و LayerNorm هر دو دقیقاً یک کار می‌کنند: از ورودی میانگین کم می‌کنند، بر انحراف معیار تقسیم می‌کنند و بعد با دو پارامتر یادگرفتنی گاما و بتا مقیاس و جابه‌جا می‌کنند. تنها تفاوتشان این است که میانگین و واریانس روی کدام مجموعه از مقادیر حساب می‌شود. تنسور ما چهار بعد دارد: N تعداد نمونه، C کانال و H و W. BatchNorm برای هر کانال، روی همه‌ی نمونه‌های batch و همه‌ی پیکسل‌ها آمار می‌گیرد؛ پس به تعداد کانال‌ها میانگین داریم و مهم‌تر اینکه نمونه‌های مختلف batch با هم ترکیب می‌شوند. LayerNorm به سبک ConvNeXt برای هر نمونه و هر پیکسل، روی بعد کانال آمار می‌گیرد؛ پس هیچ اطلاعاتی بین نمونه‌ها رد و بدل نمی‌شود. GroupNorm با یک گروه هم برای هر نمونه روی کل C و H و W آمار می‌گیرد. شکل همین را نشان می‌دهد: خانه‌های رنگی آن‌هایی هستند که یک میانگین و واریانس مشترک دارند. در کد، فایل bn_vs_ln_analysis.py، خروجی لایه‌های PyTorch و timm را با فرمول دستی مقایسه کردم و اختلاف در حد خطای گرد کردن بود. همه‌ی تفاوت‌های عملی که در سه اسلاید بعد می‌بینیم از همین یک تفاوت می‌آید: BN به بقیه‌ی batch وابسته است و LN نیست.</div></div><div class="wrap"><div class="frame"><section id="batchsize" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آزمایش ۲ · اندازه‌ی batch</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;حساسیت به اندازه‌ی batch</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<table style="font-size:28px;color:#16233A;background:#FFFFFF;border-radius:12px;text-align:center">
+<tr><th style="width:34%">LayerNorm</th><th style="width:34%">BatchNorm</th><th style="width:32%">batch</th></tr>
+<tr><td>56.73</td><td>63.76</td><td>128</td></tr>
+<tr><td>58.63</td><td>63.18</td><td>16</td></tr>
+<tr><td>58.78</td><td>58.50</td><td>4</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;دقت آزمون (٪) پس از 10 اپوک روی 10,000 تصویر آموزشی. BN با batch = 4 حدود 5.3 واحد افت می‌کند؛ LN افت نمی‌کند.</p>
+<p style="font-size:28px;line-height:1.7;color:#16233A">&#8235;بدون نرمال‌سازی: فقط 38.13%</p>
+</div>
+<img src="../results/figures/batch_size.png" alt="دقت آزمون بر حسب اندازه‌ی batch برای BN و LN" style="width:940px;height:410px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>مهم‌ترین تفاوت عملی BN و LN وابستگی BN به اندازه‌ی batch است. برای نشان دادنش هر دو مدل را با batch برابر ۴، ۱۶ و ۱۲۸ آموزش دادم. چون روی CPU بودم، این آزمایش روی ده هزار تصویر اول داده‌ی آموزش و ده اپوک انجام شد؛ برای همین دقت‌ها از آزمایش اصلی پایین‌ترند و فقط باید با هم مقایسه شوند. نرخ یادگیری هم متناسب با جذر اندازه‌ی batch مقیاس شد. نتیجه: دقت BN با batch ۱۲۸ و ۱۶ تقریباً یکی است، حدود ۶۳ و نیم درصد، ولی با batch چهار به ۵۸٫۵ می‌افتد؛ یعنی بیش از پنج واحد افت. دلیلش این است که میانگین و واریانسی که از فقط چهار تصویر تخمین زده می‌شود خیلی پرنویز است. LN اصلاً افت نمی‌کند و حتی کمی بهتر می‌شود، چون در تعداد اپوک ثابت، batch کوچک‌تر یعنی گام‌های به‌روزرسانی بیشتر. در نتیجه برتری هفت واحدی BN در batch ۱۲۸، در batch چهار کاملاً از بین می‌رود و LN کمی جلو می‌افتد. یک اجرای بدون هیچ نرمال‌سازی هم گذاشتم که فقط به ۳۸ درصد رسید؛ یعنی هر دو نوع نرمال‌سازی برای این معماری ضروری‌اند.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 8 — حساسیت به اندازه‌ی batch</b><br>مهم‌ترین تفاوت عملی BN و LN وابستگی BN به اندازه‌ی batch است. برای نشان دادنش هر دو مدل را با batch برابر ۴، ۱۶ و ۱۲۸ آموزش دادم. چون روی CPU بودم، این آزمایش روی ده هزار تصویر اول داده‌ی آموزش و ده اپوک انجام شد؛ برای همین دقت‌ها از آزمایش اصلی پایین‌ترند و فقط باید با هم مقایسه شوند. نرخ یادگیری هم متناسب با جذر اندازه‌ی batch مقیاس شد. نتیجه: دقت BN با batch ۱۲۸ و ۱۶ تقریباً یکی است، حدود ۶۳ و نیم درصد، ولی با batch چهار به ۵۸٫۵ می‌افتد؛ یعنی بیش از پنج واحد افت. دلیلش این است که میانگین و واریانسی که از فقط چهار تصویر تخمین زده می‌شود خیلی پرنویز است. LN اصلاً افت نمی‌کند و حتی کمی بهتر می‌شود، چون در تعداد اپوک ثابت، batch کوچک‌تر یعنی گام‌های به‌روزرسانی بیشتر. در نتیجه برتری هفت واحدی BN در batch ۱۲۸، در batch چهار کاملاً از بین می‌رود و LN کمی جلو می‌افتد. یک اجرای بدون هیچ نرمال‌سازی هم گذاشتم که فقط به ۳۸ درصد رسید؛ یعنی هر دو نوع نرمال‌سازی برای این معماری ضروری‌اند.</div></div><div class="wrap"><div class="frame"><section id="dependence" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آزمایش ۳ · روی مدل‌های آموزش‌دیده</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;وابستگی خروجی BN به بقیه‌ی batch</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px">
+<img src="../results/figures/batch_dependence.png" alt="تغییر logitهای یک تصویر ثابت با تغییر بقیه‌ی تصاویر batch" style="width:816px;height:360px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;یک تصویر ثابت، هم‌batchهای متفاوت</h3>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;BN با batch = 2: تغییر logitها حدود 93%؛ کلاس پیش‌بینی در 4 اجرا از 10 عوض شد. LN: دقیقاً صفر.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px">
+<img src="../results/figures/bn_test_batch_stats.png" alt="دقت آزمون مدل BN با آمار batch آزمون به جای آمار running" style="width:816px;height:360px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;آمار batch در زمان آزمون</h3>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;BN با batch آزمون 2: دقت از 87.49% به 66.01% می‌رسد. LN همیشه 81.05%.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>این دو آزمایش روی مدل‌های آموزش‌دیده انجام شده و آموزش جدید ندارد؛ کدش در bn_vs_ln_analysis.py است. در آزمایش سمت راست یک تصویر ثابت از داده‌ی آزمون را ده بار همراه با تصاویر تصادفی متفاوت در یک batch گذاشتم و مدل را با آمار batch اجرا کردم. بعد نگاه کردم خروجی همان یک تصویر چقدر عوض می‌شود. در BN با batch دوتایی، تغییرات logitها حدود ۹۳ درصد اندازه‌ی خودشان است و در چهار اجرا از ده اجرا حتی کلاس پیش‌بینی‌شده عوض شد. با batch بزرگ ۲۵۶ این تغییر به حدود نُه درصد می‌رسد ولی صفر نمی‌شود. در LN تغییر دقیقاً صفر است، چون خروجی هر تصویر فقط به خودش بستگی دارد. این همان نویزی است که در آموزش نقش منظم‌سازی دارد، و دلیل اینکه در آزمون باید از آمار running استفاده کرد. آزمایش سمت چپ همین را از زاویه‌ی دقت نشان می‌دهد: اگر مدل BN را در آزمون به جای آمار running با آمار batch آزمون اجرا کنیم، با batch دوتایی دقت از ۸۷٫۵ به ۶۶ درصد سقوط می‌کند و فقط با batch هزارتایی به مقدار اصلی نزدیک می‌شود. پس فراخوانی model.eval برای BN حیاتی است، ولی برای LN هیچ اثری ندارد. ضمناً BN در حالت train با یک تصویر تنها اصلاً اجرا نمی‌شود و خطا می‌دهد.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 9 — وابستگی خروجی BN به بقیه‌ی batch</b><br>این دو آزمایش روی مدل‌های آموزش‌دیده انجام شده و آموزش جدید ندارد؛ کدش در bn_vs_ln_analysis.py است. در آزمایش سمت راست یک تصویر ثابت از داده‌ی آزمون را ده بار همراه با تصاویر تصادفی متفاوت در یک batch گذاشتم و مدل را با آمار batch اجرا کردم. بعد نگاه کردم خروجی همان یک تصویر چقدر عوض می‌شود. در BN با batch دوتایی، تغییرات logitها حدود ۹۳ درصد اندازه‌ی خودشان است و در چهار اجرا از ده اجرا حتی کلاس پیش‌بینی‌شده عوض شد. با batch بزرگ ۲۵۶ این تغییر به حدود نُه درصد می‌رسد ولی صفر نمی‌شود. در LN تغییر دقیقاً صفر است، چون خروجی هر تصویر فقط به خودش بستگی دارد. این همان نویزی است که در آموزش نقش منظم‌سازی دارد، و دلیل اینکه در آزمون باید از آمار running استفاده کرد. آزمایش سمت چپ همین را از زاویه‌ی دقت نشان می‌دهد: اگر مدل BN را در آزمون به جای آمار running با آمار batch آزمون اجرا کنیم، با batch دوتایی دقت از ۸۷٫۵ به ۶۶ درصد سقوط می‌کند و فقط با batch هزارتایی به مقدار اصلی نزدیک می‌شود. پس فراخوانی model.eval برای BN حیاتی است، ولی برای LN هیچ اثری ندارد. ضمناً BN در حالت train با یک تصویر تنها اصلاً اجرا نمی‌شود و خطا می‌دهد.</div></div><div class="wrap"><div class="frame"><section id="folding" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آزمایش ۳ · روی مدل‌های آموزش‌دیده</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;ادغام BN در کانولوشن و سرعت inference</h2>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;line-height:1.7;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 36px;text-align:left;white-space:nowrap">W' = W · γ / √(σ² + ε)<br>b' = (b − μ) · γ / √(σ² + ε) + β</p>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px">
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;در حالت eval، BN برای هر کانال یک تبدیل خطی ثابت است؛ پس در وزن و bias کانولوشن قبلی ادغام می‌شود.</p>
+<p style="font-size:28px;line-height:1.7;color:#16233A">&#8235;30 لایه از 34 لایه‌ی BN حذف شد؛ دقت دقیقاً 87.49% ماند.</p>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;برای LN ممکن نیست: μ و σ برای هر ورودی دوباره محاسبه می‌شوند.</p>
+</div>
+<table style="width:760px;font-size:28px;color:#16233A;background:#FFFFFF;border-radius:12px;text-align:center">
+<tr><th style="width:30%">channels_last</th><th style="width:26%">NCHW</th><th style="width:44%;text-align:left">ms / batch 32</th></tr>
+<tr><td>16.7</td><td>27.2</td><td>BN</td></tr>
+<tr style="background:#E3F1EF"><td>13.8</td><td>24.4</td><td>BN folded (fastest)</td></tr>
+<tr><td>17.4</td><td>18.0</td><td>LN</td></tr>
+</table>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>آخرین تفاوت به هزینه‌ی inference مربوط است و جواب این سؤال است که چرا MobileNetV4، با اینکه از ConvNeXt الهام گرفته، هنوز از BatchNorm استفاده می‌کند. در زمان آزمون، BN دیگر آمار batch را حساب نمی‌کند و از میانگین و واریانس ثابت running استفاده می‌کند. پس برای هر کانال فقط یک ضرب و یک جمع ثابت است، یعنی یک تبدیل خطی. کانولوشن قبل از آن هم خطی است، پس می‌شود این دو را با هم یکی کرد: وزن کانولوشن در گاما تقسیم بر انحراف معیار ضرب می‌شود و bias هم به همین شکل اصلاح می‌شود؛ فرمولش روی اسلاید است. من این کار را روی مدل آموزش‌دیده انجام دادم: از ۳۴ لایه‌ی BN، سی لایه حذف شد؛ چهار لایه‌ی باقی‌مانده آن‌هایی هستند که قبلشان کانولوشن نیست، یعنی در downsample و head. بیشترین اختلاف خروجی در حد یک میلیونیم بود و دقت دقیقاً همان ۸۷٫۴۹ ماند. برای LN این کار ممکن نیست، چون میانگین و واریانس برای هر ورودی از نو حساب می‌شود. جدول زمان inference را برای batch سی‌ودوتایی روی CPU نشان می‌دهد: با قالب channels_last، مدل BN ادغام‌شده سریع‌ترین است. البته این اندازه‌گیری هم‌زمان با یک آموزش دیگر انجام شده و فقط برای مقایسه‌ی تقریبی است. روی سخت‌افزار موبایل که LN پشتیبانی بهینه ندارد، این تفاوت بیشتر می‌شود.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 10 — ادغام BN در کانولوشن و سرعت inference</b><br>آخرین تفاوت به هزینه‌ی inference مربوط است و جواب این سؤال است که چرا MobileNetV4، با اینکه از ConvNeXt الهام گرفته، هنوز از BatchNorm استفاده می‌کند. در زمان آزمون، BN دیگر آمار batch را حساب نمی‌کند و از میانگین و واریانس ثابت running استفاده می‌کند. پس برای هر کانال فقط یک ضرب و یک جمع ثابت است، یعنی یک تبدیل خطی. کانولوشن قبل از آن هم خطی است، پس می‌شود این دو را با هم یکی کرد: وزن کانولوشن در گاما تقسیم بر انحراف معیار ضرب می‌شود و bias هم به همین شکل اصلاح می‌شود؛ فرمولش روی اسلاید است. من این کار را روی مدل آموزش‌دیده انجام دادم: از ۳۴ لایه‌ی BN، سی لایه حذف شد؛ چهار لایه‌ی باقی‌مانده آن‌هایی هستند که قبلشان کانولوشن نیست، یعنی در downsample و head. بیشترین اختلاف خروجی در حد یک میلیونیم بود و دقت دقیقاً همان ۸۷٫۴۹ ماند. برای LN این کار ممکن نیست، چون میانگین و واریانس برای هر ورودی از نو حساب می‌شود. جدول زمان inference را برای batch سی‌ودوتایی روی CPU نشان می‌دهد: با قالب channels_last، مدل BN ادغام‌شده سریع‌ترین است. البته این اندازه‌گیری هم‌زمان با یک آموزش دیگر انجام شده و فقط برای مقایسه‌ی تقریبی است. روی سخت‌افزار موبایل که LN پشتیبانی بهینه ندارد، این تفاوت بیشتر می‌شود.</div></div><div class="wrap"><div class="frame"><section id="qa" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آمادگی برای پرسش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;پرسش‌های احتمالی استاد</h2>
+<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:28px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;Depth-wise چه فرقی با کانولوشن معمولی دارد؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;هر کانال جداگانه فیلتر می‌شود؛ پارامتر k²·C به جای k²·C².</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا «Inverted» Bottleneck؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;برعکس ResNet: وسط بلوک پهن (×4) و دو سر آن باریک است.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا AdamW و نه Adam؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;weight decay جدا از گرادیان اعمال می‌شود، نه به شکل L2 داخل آن.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا BN در این آزمایش بهتر شد؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;بودجه‌ی کوتاه 30 اپوک و batch بزرگ؛ LN کندتر همگرا می‌شود.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>این اسلاید برای آمادگی خودم است. کانولوشن depth-wise: در کانولوشن معمولی هر فیلتر همه‌ی کانال‌های ورودی را می‌بیند، ولی در depth-wise هر کانال فقط با فیلتر خودش فیلتر می‌شود؛ برای همین با کرنل بزرگ هفت در هفت هم ارزان است و ترکیب کانال‌ها به کانولوشن یک در یک بعدی سپرده می‌شود. Inverted Bottleneck: در bottleneck کلاسیک ResNet وسط بلوک باریک است؛ اینجا برعکس است، ورودی و خروجی باریک‌اند و وسط چهار برابر پهن می‌شود. AdamW: در Adam معمولی، weight decay به شکل L2 به گرادیان اضافه می‌شود و با نرخ یادگیری تطبیقی قاطی می‌شود؛ AdamW آن را جدا و مستقیم روی وزن اعمال می‌کند. چرا BN بهتر شد: آموزش کوتاه بود و batch بزرگ ۱۲۸؛ BN سطح loss را هموارتر می‌کند و سریع‌تر همگرا می‌شود، و نویز آمار batch هم اثر منظم‌سازی دارد. چند پرسش دیگر: LayerScale چیست؟ یک ضریب یادگرفتنی برای هر کانال روی خروجی بلوک که از مقدار خیلی کوچک شروع می‌شود. DropPath چیست؟ در آموزش، کل شاخه‌ی بلوک برای بعضی نمونه‌ها به‌صورت تصادفی حذف می‌شود و فقط اتصال باقیمانده می‌ماند. کی LN بهتر است؟ batch کوچک، داده‌ی دنباله‌ای و ترنسفورمرها، یا وقتی رفتار یکسان در آموزش و آزمون مهم است. چرا label smoothing؟ جلوی اطمینان بیش از حد مدل را می‌گیرد.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 11 — پرسش‌های احتمالی استاد</b><br>این اسلاید برای آمادگی خودم است. کانولوشن depth-wise: در کانولوشن معمولی هر فیلتر همه‌ی کانال‌های ورودی را می‌بیند، ولی در depth-wise هر کانال فقط با فیلتر خودش فیلتر می‌شود؛ برای همین با کرنل بزرگ هفت در هفت هم ارزان است و ترکیب کانال‌ها به کانولوشن یک در یک بعدی سپرده می‌شود. Inverted Bottleneck: در bottleneck کلاسیک ResNet وسط بلوک باریک است؛ اینجا برعکس است، ورودی و خروجی باریک‌اند و وسط چهار برابر پهن می‌شود. AdamW: در Adam معمولی، weight decay به شکل L2 به گرادیان اضافه می‌شود و با نرخ یادگیری تطبیقی قاطی می‌شود؛ AdamW آن را جدا و مستقیم روی وزن اعمال می‌کند. چرا BN بهتر شد: آموزش کوتاه بود و batch بزرگ ۱۲۸؛ BN سطح loss را هموارتر می‌کند و سریع‌تر همگرا می‌شود، و نویز آمار batch هم اثر منظم‌سازی دارد. چند پرسش دیگر: LayerScale چیست؟ یک ضریب یادگرفتنی برای هر کانال روی خروجی بلوک که از مقدار خیلی کوچک شروع می‌شود. DropPath چیست؟ در آموزش، کل شاخه‌ی بلوک برای بعضی نمونه‌ها به‌صورت تصادفی حذف می‌شود و فقط اتصال باقیمانده می‌ماند. کی LN بهتر است؟ batch کوچک، داده‌ی دنباله‌ای و ترنسفورمرها، یا وقتی رفتار یکسان در آموزش و آزمون مهم است. چرا label smoothing؟ جلوی اطمینان بیش از حد مدل را می‌گیرد.</div></div><div class="wrap"><div class="frame"><section id="summary" style="background:#16233A;color:#F7F5F0;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;جمع‌بندی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.4">&#8235;BN با batch بزرگ سریع‌تر و دقیق‌تر است؛ LN مستقل از batch و پایدار</h2>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;مدل</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;ConvNeXt با UIB از timm؛ 87.49% با 1.91M پارامتر.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">BatchNorm</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;وابسته به batch؛ با batch = 4 افت می‌کند، ولی در inference رایگان است.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">LayerNorm</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;رفتار یکسان در آموزش و آزمون؛ مناسب batch کوچک و دنباله‌ها.</p>
+</div>
+</div>
+<aside>جمع‌بندی می‌کنم. یک شبکه با ساختار ConvNeXt و بلوک‌های UIB معماری MobileNetV4 از timm ساختم و با AdamW و زمان‌بند کسینوسی روی CIFAR-10 آموزش دادم؛ با ۱٫۹۱ میلیون پارامتر و ۳۰ اپوک روی CPU به ۸۷٫۴۹ درصد رسید. در مقایسه‌ی دو نرمال‌سازی، BN در این تنظیمات شش و نیم واحد بهتر از LN بود، چون LN کندتر همگرا شد. ولی این برتری به batch بزرگ وابسته است: با batch چهارتایی BN پنج واحد افت کرد و به LN رسید. BN خروجی هر تصویر را به بقیه‌ی batch وابسته می‌کند و در آموزش و آزمون دو رفتار متفاوت دارد، ولی در عوض در inference در کانولوشن ادغام می‌شود و هزینه‌اش صفر است. LN مستقل از batch است و همیشه یک رفتار دارد. پیشنهاد نهایی: برای CNNهای موبایل با batch معمولی، BN انتخاب بهتری است، همان انتخاب خود MobileNetV4؛ و وقتی batch کوچک است، داده دنباله‌ای است یا ترنسفورمر داریم، LN یا GroupNorm مناسب‌تر است. ممنون از توجه‌تان.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 12 — BN با batch بزرگ سریع‌تر و دقیق‌تر است؛ LN مستقل از batch و پایدار</b><br>جمع‌بندی می‌کنم. یک شبکه با ساختار ConvNeXt و بلوک‌های UIB معماری MobileNetV4 از timm ساختم و با AdamW و زمان‌بند کسینوسی روی CIFAR-10 آموزش دادم؛ با ۱٫۹۱ میلیون پارامتر و ۳۰ اپوک روی CPU به ۸۷٫۴۹ درصد رسید. در مقایسه‌ی دو نرمال‌سازی، BN در این تنظیمات شش و نیم واحد بهتر از LN بود، چون LN کندتر همگرا شد. ولی این برتری به batch بزرگ وابسته است: با batch چهارتایی BN پنج واحد افت کرد و به LN رسید. BN خروجی هر تصویر را به بقیه‌ی batch وابسته می‌کند و در آموزش و آزمون دو رفتار متفاوت دارد، ولی در عوض در inference در کانولوشن ادغام می‌شود و هزینه‌اش صفر است. LN مستقل از batch است و همیشه یک رفتار دارد. پیشنهاد نهایی: برای CNNهای موبایل با batch معمولی، BN انتخاب بهتری است، همان انتخاب خود MobileNetV4؛ و وقتی batch کوچک است، داده دنباله‌ای است یا ترنسفورمر داریم، LN یا GroupNorm مناسب‌تر است. ممنون از توجه‌تان.</div></div><script>function fit(){document.querySelectorAll('.frame').forEach(f=>{f.firstElementChild.style.transform='scale('+(f.clientWidth/1920)+')'})}
+addEventListener('resize',fit);addEventListener('load',fit);fit();</script></body></html>

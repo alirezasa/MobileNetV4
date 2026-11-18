@@ -1,0 +1,24 @@
+<section id="results" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آزمایش ۱ · آموزش اصلی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;روند Loss و Accuracy در 30 اپوک</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:row-reverse;gap:24px;align-items:baseline">
+<p style="font-size:64px;font-weight:700;line-height:1.2;color:#0E7C7B">87.49%</p>
+<p style="font-size:28px;color:#4A5568">BatchNorm</p>
+</div>
+<div style="display:flex;flex-direction:row-reverse;gap:24px;align-items:baseline">
+<p style="font-size:64px;font-weight:700;line-height:1.2">81.05%</p>
+<p style="font-size:28px;color:#4A5568">LayerNorm2d</p>
+</div>
+<div style="display:flex;flex-direction:row-reverse;gap:24px;align-items:baseline">
+<p style="font-size:64px;font-weight:700;line-height:1.2">81.58%</p>
+<p style="font-size:28px;color:#4A5568">GroupNorm(1)</p>
+</div>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;دقت آموزش LN هم پایین‌تر است (86.1% در برابر 93.8%)؛ پس فاصله از نوع کم‌برازش است، نه بیش‌برازش.</p>
+</div>
+<img src="../../results/figures/main_curves.png" alt="منحنی Loss و Accuracy آموزش و آزمون برای BN، LN و GN" style="width:1000px;height:463px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>این نتیجه‌ی آموزش اصلی است: همان شبکه با همان تنظیمات، سه بار با سه نوع نرمال‌سازی. در نمودار خط‌چین آموزش و خط پر آزمون است. هر سه مدل بدون مشکل آموزش دیدند و loss یکنواخت کم شده. BatchNorm در پایان به ۸۷٫۴۹ درصد دقت آزمون رسید، LayerNorm به ۸۱٫۰۵ و GroupNorm با یک گروه به ۸۱٫۵۸ درصد. BN از همان اپوک اول جلوتر است و بیشترین فاصله، حدود نُه واحد، بین اپوک پنج تا ده است. نکته‌ی مهم تحلیل این است: دقت آموزش LN هم پایین‌تر از BN است، ۸۶ در برابر ۹۴ درصد. پس مشکل LN تعمیم‌پذیری نیست؛ در این بودجه‌ی کوتاه ۳۰ اپوکی کندتر همگرا شده و کم‌برازش است. این با تجربه‌ی مقاله‌ی ConvNeXt سازگار است که LN فقط با ۳۰۰ اپوک آموزش و augmentation قوی به BN رسید. یک نکته‌ی دیگر: loss آموزش از loss آزمون بیشتر است، چون loss آموزش شامل label smoothing و DropPath و augmentation است ولی loss آزمون Cross-Entropy ساده روی تصاویر تمیز است. آزمایش GroupNorm را هم برای این گذاشتم که ببینم مشکل LN از نرمال‌سازی جداگانه‌ی هر پیکسل است یا نه؛ نتیجه تقریباً یکی شد، پس هر دو روشِ مستقل از batch در آموزش کوتاه عقب‌ترند. هر آزمایش با یک seed اجرا شده، پس تفاوت‌های زیر یک واحد قطعی نیستند.</aside>
+</section>

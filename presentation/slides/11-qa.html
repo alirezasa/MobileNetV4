@@ -1,0 +1,24 @@
+<section id="qa" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آمادگی برای پرسش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;پرسش‌های احتمالی استاد</h2>
+<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:28px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;Depth-wise چه فرقی با کانولوشن معمولی دارد؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;هر کانال جداگانه فیلتر می‌شود؛ پارامتر k²·C به جای k²·C².</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا «Inverted» Bottleneck؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;برعکس ResNet: وسط بلوک پهن (×4) و دو سر آن باریک است.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا AdamW و نه Adam؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;weight decay جدا از گرادیان اعمال می‌شود، نه به شکل L2 داخل آن.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا BN در این آزمایش بهتر شد؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;بودجه‌ی کوتاه 30 اپوک و batch بزرگ؛ LN کندتر همگرا می‌شود.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>این اسلاید برای آمادگی خودم است. کانولوشن depth-wise: در کانولوشن معمولی هر فیلتر همه‌ی کانال‌های ورودی را می‌بیند، ولی در depth-wise هر کانال فقط با فیلتر خودش فیلتر می‌شود؛ برای همین با کرنل بزرگ هفت در هفت هم ارزان است و ترکیب کانال‌ها به کانولوشن یک در یک بعدی سپرده می‌شود. Inverted Bottleneck: در bottleneck کلاسیک ResNet وسط بلوک باریک است؛ اینجا برعکس است، ورودی و خروجی باریک‌اند و وسط چهار برابر پهن می‌شود. AdamW: در Adam معمولی، weight decay به شکل L2 به گرادیان اضافه می‌شود و با نرخ یادگیری تطبیقی قاطی می‌شود؛ AdamW آن را جدا و مستقیم روی وزن اعمال می‌کند. چرا BN بهتر شد: آموزش کوتاه بود و batch بزرگ ۱۲۸؛ BN سطح loss را هموارتر می‌کند و سریع‌تر همگرا می‌شود، و نویز آمار batch هم اثر منظم‌سازی دارد. چند پرسش دیگر: LayerScale چیست؟ یک ضریب یادگرفتنی برای هر کانال روی خروجی بلوک که از مقدار خیلی کوچک شروع می‌شود. DropPath چیست؟ در آموزش، کل شاخه‌ی بلوک برای بعضی نمونه‌ها به‌صورت تصادفی حذف می‌شود و فقط اتصال باقیمانده می‌ماند. کی LN بهتر است؟ batch کوچک، داده‌ی دنباله‌ای و ترنسفورمرها، یا وقتی رفتار یکسان در آموزش و آزمون مهم است. چرا label smoothing؟ جلوی اطمینان بیش از حد مدل را می‌گیرد.</aside>
+</section>

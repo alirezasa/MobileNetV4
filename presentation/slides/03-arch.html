@@ -1,0 +1,57 @@
+<section id="arch" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش ۱ · معماری</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;معماری ConvNeXt-UIB برای تصاویر 32×32</h2>
+<div style="display:flex;flex-direction:row;gap:10px;align-items:center;text-align:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stem</p>
+<p style="font-size:24px;color:#4A5568">Conv 2×2 / 2</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">32×16×16</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stage 1</p>
+<p style="font-size:24px;color:#4A5568">2 × UIB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">32×16×16</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stage 2</p>
+<p style="font-size:24px;color:#4A5568">2 × UIB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">64×8×8</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stage 3</p>
+<p style="font-size:24px;color:#4A5568">4 × UIB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">128×4×4</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Stage 4</p>
+<p style="font-size:24px;color:#4A5568">2 × UIB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">256×2×2</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#16233A;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700;color:#F7F5F0">Head</p>
+<p style="font-size:24px;color:#C9D3E0">GAP, Norm</p>
+<p style="font-size:24px;color:#F2B544;font-weight:700">Linear(10)</p>
+</div>
+</div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;هر بلوک UIB</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;DW 7×7، expansion ×4، GELU، LayerScale با مقدار اولیه‌ی 1e-6 و DropPath خطی تا 0.1</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;Downsample بین Stageها</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;مثل ConvNeXt: یک Norm و سپس Conv 2×2 با stride 2؛ کانال دو برابر، ابعاد نصف</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;نرمال‌سازی قابل انتخاب</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;آرگومان norm: bn، ln، gn1 یا none؛ در stem، همه‌ی UIBها، downsample و head یکسان است</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>ساختار کلان شبکه همان ConvNeXt است. اول یک stem از نوع patchify داریم: در ConvNeXt اصلی برای ImageNet یک کانولوشن چهار در چهار با گام چهار است، ولی چون تصاویر CIFAR فقط ۳۲ در ۳۲ هستند آن را دو در دو با گام دو گذاشتم تا خروجی ۱۶ در ۱۶ شود. بعد چهار stage داریم با ۲، ۲، ۴ و ۲ بلوک UIB و تعداد کانال ۳۲، ۶۴، ۱۲۸ و ۲۵۶. بین stageها لایه‌ی downsample به سبک ConvNeXt است: یک نرمال‌سازی و بعد کانولوشن دو در دو با گام دو. در انتها Global Average Pooling، یک نرمال‌سازی و یک لایه‌ی خطی به ده کلاس. تابع فعال‌سازی GELU است، LayerScale با مقدار اولیه‌ی خیلی کوچک شروع می‌شود تا هر بلوک در ابتدا تقریباً همانی باشد، و DropPath یا Stochastic Depth به‌صورت خطی تا یک‌دهم زیاد می‌شود. نکته‌ی مهم برای بخش دوم پروژه این است که نوع نرمال‌سازی یک آرگومان است و همه‌جای شبکه با هم عوض می‌شود. چون در پیاده‌سازی timm بعد از هر کانولوشن داخل UIB یک لایه‌ی نرمال‌سازی هست، برخلاف ConvNeXt اصلی که فقط یکی دارد، نوع نرمال‌سازی روی کل شبکه اثر زیادی دارد و این ساختار برای مقایسه‌ی BN و LN مناسب است.</aside>
+</section>
