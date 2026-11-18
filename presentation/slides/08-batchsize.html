@@ -1,0 +1,19 @@
+<section id="batchsize" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آزمایش ۲ · اندازه‌ی batch</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;حساسیت به اندازه‌ی batch</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<table style="font-size:28px;color:#16233A;background:#FFFFFF;border-radius:12px;text-align:center">
+<tr><th style="width:34%">LayerNorm</th><th style="width:34%">BatchNorm</th><th style="width:32%">batch</th></tr>
+<tr><td>56.73</td><td>63.76</td><td>128</td></tr>
+<tr><td>58.63</td><td>63.18</td><td>16</td></tr>
+<tr><td>58.78</td><td>58.50</td><td>4</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;دقت آزمون (٪) پس از 10 اپوک روی 10,000 تصویر آموزشی. BN با batch = 4 حدود 5.3 واحد افت می‌کند؛ LN افت نمی‌کند.</p>
+<p style="font-size:28px;line-height:1.7;color:#16233A">&#8235;بدون نرمال‌سازی: فقط 38.13%</p>
+</div>
+<img src="../../results/figures/batch_size.png" alt="دقت آزمون بر حسب اندازه‌ی batch برای BN و LN" style="width:940px;height:410px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">MobileNetV4 UIB · CIFAR-10</p>
+<aside>مهم‌ترین تفاوت عملی BN و LN وابستگی BN به اندازه‌ی batch است. برای نشان دادنش هر دو مدل را با batch برابر ۴، ۱۶ و ۱۲۸ آموزش دادم. چون روی CPU بودم، این آزمایش روی ده هزار تصویر اول داده‌ی آموزش و ده اپوک انجام شد؛ برای همین دقت‌ها از آزمایش اصلی پایین‌ترند و فقط باید با هم مقایسه شوند. نرخ یادگیری هم متناسب با جذر اندازه‌ی batch مقیاس شد. نتیجه: دقت BN با batch ۱۲۸ و ۱۶ تقریباً یکی است، حدود ۶۳ و نیم درصد، ولی با batch چهار به ۵۸٫۵ می‌افتد؛ یعنی بیش از پنج واحد افت. دلیلش این است که میانگین و واریانسی که از فقط چهار تصویر تخمین زده می‌شود خیلی پرنویز است. LN اصلاً افت نمی‌کند و حتی کمی بهتر می‌شود، چون در تعداد اپوک ثابت، batch کوچک‌تر یعنی گام‌های به‌روزرسانی بیشتر. در نتیجه برتری هفت واحدی BN در batch ۱۲۸، در batch چهار کاملاً از بین می‌رود و LN کمی جلو می‌افتد. یک اجرای بدون هیچ نرمال‌سازی هم گذاشتم که فقط به ۳۸ درصد رسید؛ یعنی هر دو نوع نرمال‌سازی برای این معماری ضروری‌اند.</aside>
+</section>

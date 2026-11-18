@@ -1,0 +1,20 @@
+<section id="summary" style="background:#16233A;color:#F7F5F0;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;جمع‌بندی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.4">&#8235;BN با batch بزرگ سریع‌تر و دقیق‌تر است؛ LN مستقل از batch و پایدار</h2>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;مدل</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;ConvNeXt با UIB از timm؛ 87.49% با 1.91M پارامتر.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">BatchNorm</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;وابسته به batch؛ با batch = 4 افت می‌کند، ولی در inference رایگان است.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">LayerNorm</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;رفتار یکسان در آموزش و آزمون؛ مناسب batch کوچک و دنباله‌ها.</p>
+</div>
+</div>
+<aside>جمع‌بندی می‌کنم. یک شبکه با ساختار ConvNeXt و بلوک‌های UIB معماری MobileNetV4 از timm ساختم و با AdamW و زمان‌بند کسینوسی روی CIFAR-10 آموزش دادم؛ با ۱٫۹۱ میلیون پارامتر و ۳۰ اپوک روی CPU به ۸۷٫۴۹ درصد رسید. در مقایسه‌ی دو نرمال‌سازی، BN در این تنظیمات شش و نیم واحد بهتر از LN بود، چون LN کندتر همگرا شد. ولی این برتری به batch بزرگ وابسته است: با batch چهارتایی BN پنج واحد افت کرد و به LN رسید. BN خروجی هر تصویر را به بقیه‌ی batch وابسته می‌کند و در آموزش و آزمون دو رفتار متفاوت دارد، ولی در عوض در inference در کانولوشن ادغام می‌شود و هزینه‌اش صفر است. LN مستقل از batch است و همیشه یک رفتار دارد. پیشنهاد نهایی: برای CNNهای موبایل با batch معمولی، BN انتخاب بهتری است، همان انتخاب خود MobileNetV4؛ و وقتی batch کوچک است، داده دنباله‌ای است یا ترنسفورمر داریم، LN یا GroupNorm مناسب‌تر است. ممنون از توجه‌تان.</aside>
+</section>
